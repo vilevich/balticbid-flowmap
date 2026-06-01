@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="lv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>BalticBid — Plūsmu karte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F4F3F1; --ink:#1A1A1A; --muted:#8A8A86; --line:#E1DED7;
+    --wire:#D7D4CD; --wire2:#ECEAE4; --accent:#FF601A; --card:#FFFFFF;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;font-family:'Geist',system-ui,sans-serif;color:var(--ink);background:var(--canvas)}
+  .mono{font-family:'Geist Mono',ui-monospace,monospace}
+
+  /* Dotted grid backdrop */
+  #viewport{position:fixed;inset:0;cursor:grab;
+    background-image:radial-gradient(circle, #D9D6CF 1px, transparent 1.4px);
+    background-size:26px 26px; background-position:0 0;}
+  #viewport.panning{cursor:grabbing}
+  #world{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+  #edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
+
+  /* Cluster regions */
+  .cluster{position:absolute;border:1px dashed var(--line);border-radius:18px;background:rgba(255,255,255,.32)}
+  .cluster .clabel{position:absolute;top:-11px;left:22px;background:var(--canvas);padding:0 10px;
+    font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .cluster .cdot{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:7px;transform:translateY(0)}
+
+  /* Node */
+  .node{position:absolute;user-select:none;cursor:grab}
+  .node.dragging{cursor:grabbing;z-index:50}
+  .node .badge{position:absolute;top:-12px;left:-12px;width:26px;height:26px;border-radius:50%;
+    background:var(--accent);color:#1A1A1A;font-family:'Geist Mono',monospace;font-weight:500;font-size:12px;
+    display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .node .frame{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .node .caption{margin-top:10px;text-align:center;font-family:'Geist Mono',monospace;font-size:11px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+  .node .sub{display:block;text-transform:none;letter-spacing:0;font-family:'Geist',sans-serif;font-size:11px;color:var(--muted);margin-top:3px}
+
+  /* Device chromes */
+  .scr{position:relative;background:#fff}
+  .browser .bar{height:22px;background:#F6F5F2;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:5px;padding:0 9px}
+  .browser .dot{width:6px;height:6px;border-radius:50%}
+  .browser .url{flex:1;height:11px;background:#fff;border:1px solid var(--line);border-radius:4px;margin-left:6px}
+  .phone{padding:7px;background:#EFEDE8;border-radius:22px}
+  .phone .scr{border-radius:14px;overflow:hidden}
+  .phone .notch{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:42px;height:5px;border-radius:3px;background:#CFCCC4;z-index:2}
+  .desk .stand{height:14px;background:#EFEDE8;margin:0 auto;width:38%;border-radius:0 0 4px 4px}
+  .desk .base{height:6px;background:#E1DED7;width:54%;margin:4px auto 0;border-radius:3px}
+
+  /* Wireframe atoms */
+  .wbar{height:16px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:5px;padding:0 7px}
+  .logo{width:9px;height:9px;background:var(--accent);border-radius:1px}
+  .navd{width:24px;height:5px;background:var(--wire);border-radius:2px}
+  .pad{padding:9px}
+  .img{background:var(--wire2);border:1px solid var(--wire);position:relative;border-radius:2px}
+  .img::before,.img::after{content:"";position:absolute;inset:0;background:linear-gradient(to top right,transparent 49%,var(--wire) 49.5%,var(--wire) 50.5%,transparent 51%)}
+  .img::after{background:linear-gradient(to bottom right,transparent 49%,var(--wire) 49.5%,var(--wire) 50.5%,transparent 51%)}
+  .ln{height:5px;background:var(--wire);border-radius:2px;margin:4px 0}
+  .ln.s{width:60%}.ln.m{width:80%}.ln.xs{width:40%}
+  .blk{background:var(--wire2);border:1px solid var(--wire);border-radius:3px}
+  .btn{height:13px;background:#3A3A3A;border-radius:3px}
+  .btn.acc{background:var(--accent)}
+  .btn.out{background:#fff;border:1px solid var(--wire)}
+  .row{display:flex;gap:6px}
+  .col{display:flex;flex-direction:column}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+  .chip{height:8px;border-radius:5px;background:var(--wire)}
+  .field{height:11px;background:#fff;border:1px solid var(--wire);border-radius:3px;margin:4px 0}
+  .circle{border-radius:50%;background:var(--accent);margin:0 auto}
+  .side{width:34%;border-right:1px solid var(--line);padding:6px}
+  .modalwrap{position:absolute;inset:0;background:rgba(20,20,20,.18);display:flex;align-items:center;justify-content:center}
+  .modal{width:74%;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px;box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
+
+  /* Top toolbar */
+  #bar{position:fixed;top:16px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:100;pointer-events:none}
+  #bar .panel{pointer-events:auto;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+  #title{padding:10px 16px;display:flex;align-items:center;gap:12px}
+  #title .mark{width:18px;height:18px;background:var(--accent);border-radius:3px}
+  #title b{font-weight:600;font-size:15px;letter-spacing:-.01em}
+  #title span{font-size:12px;color:var(--muted)}
+  #legend{margin-left:auto;display:flex;gap:16px;padding:9px 16px;font-size:11.5px;color:var(--ink);align-items:center}
+  #legend .lg{display:flex;align-items:center;gap:7px}
+  #legend .sw{width:10px;height:10px;border-radius:3px}
+  #ctrls{display:flex;gap:6px;padding:7px}
+  #ctrls button{pointer-events:auto;width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;
+    font-size:16px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
+  #ctrls button:hover{border-color:var(--ink)}
+  #ctrls button.wide{width:auto;padding:0 12px;font-size:12px;font-family:'Geist Mono',monospace;letter-spacing:.04em}
+  #hint{position:fixed;bottom:16px;left:16px;z-index:100;font-size:11.5px;color:var(--muted);
+    background:rgba(255,255,255,.8);border:1px solid var(--line);border-radius:8px;padding:8px 12px;backdrop-filter:blur(8px)}
+  #foot{position:fixed;bottom:16px;right:16px;z-index:100;font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="bar">
+  <div class="panel" id="title"><div class="mark"></div><b>BalticBid</b><span>Plūsmu karte · v1.0</span></div>
+  <div class="panel" id="legend">
+    <div class="lg"><span class="sw" style="background:#FF601A"></span>Galvenā plūsma</div>
+    <div class="lg"><span class="sw" style="background:#C9C6BF"></span>Saistīta darbība</div>
+    <div class="lg"><span class="sw" style="background:#fff;border:1px dashed #B9B6AE"></span>Sekundāra</div>
+  </div>
+  <div class="panel" id="ctrls">
+    <button id="zin" title="Pietuvināt">+</button>
+    <button id="zout" title="Attālināt">−</button>
+    <button id="reset" class="wide" title="Atiestatīt skatu">FIT</button>
+  </div>
+</div>
+
+<div id="viewport">
+  <div id="world">
+    <svg id="edges">
+      <defs>
+        <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#C9C6BF"></path>
+        </marker>
+        <marker id="arrA" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#FF601A"></path>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</div>
+
+<div id="hint">Velc fonu, lai pārvietotos · ritini, lai tuvinātu · velc kartiņas, lai pārkārtotu</div>
+<div id="foot">BALTICBID · WIREFRAME FLOW</div>
+
+<script>
+// ---------- Cluster regions ----------
+const CLUSTERS = [
+  {x:20,  y:40,   w:780, h:560, label:'Autentifikācija', color:'#FF601A'},
+  {x:840, y:360,  w:1180,h:300, label:'Publiskā plūsma', color:'#3A3A3A'},
+  {x:840, y:700,  w:860, h:300, label:'Profils',         color:'#7A7A76'},
+  {x:20,  y:760,  w:780, h:420, label:'Admin (back-office)', color:'#B0ADA6'},
+  {x:1740,y:700,  w:280, h:480, label:'Sistēma',         color:'#B0ADA6'},
+];
+
+// ---------- Nodes ----------
+// kind drives the mini-wireframe; dev = 'phone' | 'browser' | 'desk'
+const NODES = [
+  // Auth
+  {id:'role',   n:1, x:60,  y:120, dev:'phone',   kind:'role',   title:'Reģistrācija', sub:'Konta veida izvēle'},
+  {id:'form',   n:2, x:300, y:120, dev:'phone',   kind:'form',   title:'Reģistrācija', sub:'B2C / B2B forma'},
+  {id:'verify', n:3, x:560, y:90,  dev:'phone',   kind:'status', title:'E-pasta verifikācija', sub:'Apstiprini saiti'},
+  {id:'pending',n:4, x:560, y:380, dev:'phone',   kind:'status2',title:'Konts izskatīšanā', sub:'Manuāla pārbaude'},
+  {id:'login',  n:5, x:60,  y:400, dev:'phone',   kind:'login',  title:'Pieteikšanās', sub:'Ienākšana'},
+  {id:'forgot', n:6, x:300, y:400, dev:'phone',   kind:'forgot', title:'Paroles atjaunošana', sub:''},
+
+  // Public
+  {id:'catalog',n:7, x:880, y:430, dev:'browser', kind:'catalog',title:'Katalogs', sub:'Filtri + kārtošana'},
+  {id:'detail', n:8, x:1190,y:430, dev:'browser', kind:'detail', title:'Lota lapa', sub:'Solīšana + taimeris'},
+  {id:'modal',  n:9, x:1510,y:400, dev:'phone',   kind:'modal',  title:'Solījuma apstiprināšana', sub:''},
+  {id:'win',    n:10,x:1770,y:430, dev:'browser', kind:'win',    title:'Izsoles beigas', sub:'Uzvara / zaudējums'},
+
+  // Profile
+  {id:'bids',   n:11,x:880, y:770, dev:'browser', kind:'bids',   title:'Mani solījumi', sub:'Aktīvie / uzvarētie'},
+  {id:'favs',   n:12,x:1190,y:770, dev:'browser', kind:'favs',   title:'Favorīti', sub:''},
+  {id:'docs',   n:13,x:1500,y:770, dev:'browser', kind:'docs',   title:'Dokumenti', sub:'Rēķini / līgumi'},
+
+  // Admin
+  {id:'admin',  n:14,x:300, y:820, dev:'desk',    kind:'admin',  title:'Admin pārskats', sub:'Back-office'},
+  {id:'wizard', n:15,x:560, y:1010,dev:'browser', kind:'wizard', title:'Lota izveides vednis', sub:'5 soļi'},
+  {id:'users',  n:16,x:60,  y:1010,dev:'browser', kind:'users',  title:'Lietotāju apstiprināšana', sub:'VIES'},
+  {id:'adocs',  n:17,x:300, y:1010,dev:'browser', kind:'docs',   title:'Dokumentu ģenerēšana', sub:'Rēķinu sūtīšana'},
+
+  // System
+  {id:'email',  n:18,x:1770,y:760, dev:'phone',   kind:'email',  title:'E-pasta šabloni', sub:'28 tipi × 3 val.'},
+  {id:'errors', n:19,x:1770,y:1010,dev:'browser', kind:'errors', title:'Kļūdu lapas', sub:'404 / 503'},
+];
+
+// ---------- Edges ----------  {from, to, type:'main'|'rel'|'sec'}
+const EDGES = [
+  {f:'role',a:'r',  t:'form',b:'l',  type:'main'},
+  {f:'form',a:'r',  t:'verify',b:'l',type:'main'},
+  {f:'verify',a:'b',t:'pending',b:'t',type:'main'},
+  {f:'pending',a:'r',t:'catalog',b:'l',type:'main'},
+  {f:'login',a:'r', t:'forgot',b:'l',type:'sec'},
+  {f:'forgot',a:'b',t:'login',b:'b', type:'sec'},
+  {f:'login',a:'r', t:'bids',b:'l',  type:'main'},
+
+  {f:'catalog',a:'r',t:'detail',b:'l',type:'main'},
+  {f:'detail',a:'r', t:'modal',b:'l', type:'main'},
+  {f:'modal',a:'r',  t:'win',b:'l',   type:'main'},
+  {f:'detail',a:'b', t:'login',b:'r', type:'sec'},
+  {f:'catalog',a:'b',t:'favs',b:'t',  type:'rel'},
+
+  {f:'win',a:'b',   t:'docs',b:'t',   type:'main'},
+  {f:'bids',a:'r',  t:'favs',b:'l',   type:'rel'},
+  {f:'favs',a:'r',  t:'docs',b:'l',   type:'rel'},
+  {f:'bids',a:'t',  t:'detail',b:'b', type:'rel'},
+
+  {f:'admin',a:'b', t:'wizard',b:'t', type:'main'},
+  {f:'admin',a:'l', t:'users',b:'t',  type:'main'},
+  {f:'admin',a:'b', t:'adocs',b:'t',  type:'main'},
+  {f:'wizard',a:'t',t:'catalog',b:'b',type:'rel'},
+  {f:'users',a:'r', t:'pending',b:'b',type:'rel'},
+
+  {f:'win',a:'r',   t:'email',b:'t',  type:'rel'},
+  {f:'modal',a:'b', t:'email',b:'l',  type:'rel'},
+];
+
+// ---------- Mini-wireframe templates ----------
+function bar(){return `<div class="wbar"><div class="logo"></div><div class="navd"></div><div class="navd" style="width:16px"></div><div style="flex:1"></div><div class="blk" style="width:18px;height:8px"></div></div>`}
+function browserBar(){return `<div class="bar"><div class="dot" style="background:#E08585"></div><div class="dot" style="background:#E0C285"></div><div class="dot" style="background:#9FD09F"></div><div class="url"></div></div>`}
+
+const TPL = {
+  role:()=>`${bar()}<div class="pad"><div class="ln xs"></div>
+    <div class="blk" style="height:30px;margin:7px 0;display:flex;align-items:center;padding:6px;gap:6px"><div class="blk" style="width:20px;height:18px"></div><div class="col" style="flex:1"><div class="ln m"></div><div class="ln s"></div></div></div>
+    <div class="blk" style="height:30px;display:flex;align-items:center;padding:6px;gap:6px"><div class="blk" style="width:20px;height:18px"></div><div class="col" style="flex:1"><div class="ln m"></div><div class="ln s"></div></div></div></div>`,
+  form:()=>`${bar()}<div class="pad"><div class="ln s"></div><div class="field"></div><div class="row"><div class="field" style="flex:1"></div><div class="field" style="flex:1"></div></div><div class="field"></div><div class="row"><div class="field" style="flex:1"></div><div class="field" style="flex:1"></div></div><div class="btn acc" style="margin-top:6px"></div></div>`,
+  status:()=>`${bar()}<div class="pad" style="text-align:center;padding-top:30px"><div class="circle" style="width:30px;height:30px"></div><div class="ln m" style="margin:12px auto 4px"></div><div class="ln s" style="margin:0 auto"></div><div class="ln s" style="margin:4px auto"></div><div class="btn out" style="width:54%;margin:14px auto 0"></div></div>`,
+  status2:()=>`${bar()}<div class="pad" style="text-align:center;padding-top:30px"><div class="circle" style="width:30px;height:30px;background:#D7D4CD"></div><div class="ln m" style="margin:12px auto 4px"></div><div class="ln s" style="margin:0 auto"></div><div class="ln xs" style="margin:4px auto"></div><div class="btn out" style="width:54%;margin:14px auto 0"></div></div>`,
+  login:()=>`${bar()}<div class="pad" style="padding-top:14px"><div class="ln xs"></div><div class="field"></div><div class="field"></div><div class="row" style="justify-content:space-between"><div class="ln" style="width:28%"></div><div class="ln" style="width:28%;background:var(--accent);opacity:.6"></div></div><div class="btn acc" style="margin-top:8px"></div></div>`,
+  forgot:()=>`${bar()}<div class="pad" style="padding-top:18px"><div class="ln s"></div><div class="ln xs"></div><div class="field" style="margin-top:10px"></div><div class="btn acc" style="margin-top:8px"></div></div>`,
+
+  catalog:()=>`${browserBar()}${bar()}<div style="display:flex;height:calc(100% - 38px)">
+    <div class="side"><div class="ln xs"></div><div class="field"></div><div class="ln xs" style="margin-top:8px"></div><div class="field"></div><div class="ln xs" style="margin-top:8px"></div><div class="field"></div></div>
+    <div class="pad" style="flex:1"><div class="grid3">${'<div class="col"><div class="img" style="height:30px"></div><div class="ln s" style="margin-top:4px"></div><div class="ln xs"></div></div>'.repeat(6)}</div></div></div>`,
+  detail:()=>`${browserBar()}${bar()}<div style="display:flex;gap:8px;padding:8px;height:calc(100% - 38px)">
+    <div style="flex:1.3"><div class="img" style="height:64px"></div><div class="row" style="margin-top:5px">${'<div class="blk" style="width:22px;height:16px"></div>'.repeat(4)}</div><div class="ln m" style="margin-top:6px"></div><div class="row" style="margin-top:6px">${'<div class="col" style="flex:1"><div class="ln xs"></div><div class="ln s"></div></div>'.repeat(3)}</div></div>
+    <div style="flex:1;border:1px solid var(--line);border-radius:4px;padding:7px"><div class="ln xs"></div><div class="ln" style="width:70%;height:9px;background:#3A3A3A"></div><div class="row" style="margin-top:6px">${'<div class="blk" style="flex:1;height:18px"></div>'.repeat(4)}</div><div class="field" style="margin-top:6px"></div><div class="btn acc" style="margin-top:5px"></div></div></div>`,
+  modal:()=>`${bar()}<div class="scr" style="height:230px;position:relative;background:#F2F1EE"><div class="modalwrap"><div class="modal"><div class="ln s"></div><div class="ln xs"></div><div class="blk" style="height:34px;margin:7px 0;padding:5px"><div class="ln m"></div><div class="ln s"></div><div class="ln m" style="background:#3A3A3A"></div></div><div class="row"><div class="ln xs"></div><div class="ln" style="flex:1"></div></div><div class="row" style="margin-top:7px"><div class="btn out" style="flex:1"></div><div class="btn acc" style="flex:1"></div></div></div></div></div>`,
+  win:()=>`${browserBar()}${bar()}<div class="pad"><div class="blk" style="height:18px;background:#CDEBCD;border-color:#A9D9A9;border-radius:4px;margin-bottom:7px"></div><div class="row" style="gap:8px"><div class="img" style="width:46%;height:46px"></div><div class="col" style="flex:1"><div class="ln m"></div><div class="ln s"></div><div class="ln" style="width:50%;height:9px;background:#3A3A3A;margin-top:4px"></div><div class="btn out" style="width:60%;margin-top:6px"></div></div></div></div>`,
+
+  bids:()=>`${browserBar()}${bar()}<div style="display:flex;height:calc(100% - 38px)"><div class="side"><div class="blk" style="height:14px;margin-bottom:6px"></div>${'<div class="ln m" style="margin:7px 0"></div>'.repeat(5)}</div>
+    <div class="pad" style="flex:1"><div class="row" style="gap:5px;margin-bottom:7px"><div class="chip" style="width:34px;background:#3A3A3A"></div><div class="chip" style="width:34px"></div><div class="chip" style="width:34px"></div></div>${'<div class="blk" style="height:24px;margin-bottom:6px;display:flex;align-items:center;gap:6px;padding:4px"><div class="img" style="width:26px;height:16px"></div><div class="col" style="flex:1"><div class="ln m"></div><div class="ln s"></div></div><div class="chip" style="width:30px;background:#FFD9C7"></div></div>'.repeat(3)}</div></div>`,
+  favs:()=>`${browserBar()}${bar()}<div class="pad"><div class="grid2">${'<div class="col"><div class="img" style="height:34px"></div><div class="ln s" style="margin-top:4px"></div><div class="ln xs"></div></div>'.repeat(4)}</div></div>`,
+  docs:()=>`${browserBar()}${bar()}<div class="pad">${'<div class="blk" style="height:22px;margin-bottom:6px;display:flex;align-items:center;gap:6px;padding:5px"><div class="blk" style="width:16px;height:14px"></div><div class="col" style="flex:1"><div class="ln m"></div><div class="ln xs"></div></div><div class="chip" style="width:24px;background:#CDEBCD"></div></div>'.repeat(4)}</div>`,
+
+  admin:()=>`${browserBar()}<div style="display:flex;height:calc(100% - 22px)"><div style="width:30%;background:#F6F5F2;border-right:1px solid var(--line);padding:6px"><div class="ln s"></div>${'<div class="ln m" style="margin:7px 0"></div>'.repeat(5)}</div>
+    <div class="pad" style="flex:1"><div class="ln s"></div><div class="grid2" style="margin-top:6px">${'<div class="blk" style="height:24px"></div>'.repeat(4)}</div><div class="blk" style="height:26px;margin-top:6px"></div></div></div>`,
+  wizard:()=>`${browserBar()}<div style="display:flex;height:calc(100% - 22px)"><div style="width:24%;background:#F6F5F2;border-right:1px solid var(--line);padding:6px">${'<div class="ln m" style="margin:6px 0"></div>'.repeat(5)}</div>
+    <div class="pad" style="flex:1"><div class="row" style="gap:4px;margin-bottom:7px">${'<div class="circle" style="width:11px;height:11px;background:#D7D4CD"></div><div class="ln xs" style="width:18px"></div>'.repeat(4)}</div><div class="row"><div class="field" style="flex:1"></div><div class="field" style="flex:1"></div></div><div class="row"><div class="field" style="flex:1"></div><div class="field" style="flex:1"></div></div><div class="blk" style="height:24px;margin-top:5px"></div><div class="row" style="justify-content:flex-end;margin-top:6px"><div class="btn acc" style="width:30%"></div></div></div></div>`,
+  users:()=>`${browserBar()}${bar()}<div class="pad">${'<div class="blk" style="height:26px;margin-bottom:6px;display:flex;align-items:center;gap:6px;padding:5px"><div class="col" style="flex:1"><div class="ln m"></div><div class="row" style="gap:4px"><div class="chip" style="width:26px"></div><div class="chip" style="width:30px;background:#CDEBCD"></div></div></div><div class="btn out" style="width:22px"></div><div class="btn acc" style="width:26px"></div></div>'.repeat(3)}</div>`,
+
+  email:()=>`${bar()}<div class="pad" style="background:#F2F1EE;padding:12px"><div style="background:#fff;border:1px solid var(--line);border-radius:4px;overflow:hidden"><div style="height:26px;background:#3A3A3A;display:flex;align-items:center;justify-content:center"><div class="logo" style="margin-right:4px"></div><div class="ln" style="width:40px;height:7px;background:#fff;margin:0"></div></div><div class="pad"><div class="ln m"></div><div class="ln s"></div><div class="ln xs"></div><div class="blk" style="height:30px;margin:7px 0"></div><div class="btn acc"></div></div><div style="height:22px;background:#F6F5F2;border-top:1px solid var(--line)"></div></div></div>`,
+  errors:()=>`${browserBar()}${bar()}<div class="pad" style="text-align:center;padding-top:20px"><div class="ln" style="width:38%;height:20px;margin:0 auto;background:#3A3A3A"></div><div class="ln s" style="margin:10px auto 4px"></div><div class="ln xs" style="margin:0 auto"></div><div class="btn acc" style="width:42%;margin:12px auto 0"></div></div>`,
+};
+
+// device sizes
+const SIZE = {
+  phone:  {w:178, h:300},
+  browser:{w:260, h:188},
+  desk:   {w:280, h:190},
+};
+
+// ---------- Render ----------
+const world = document.getElementById('world');
+const svg = document.getElementById('edges');
+const viewport = document.getElementById('viewport');
+const nodeEls = {};
+
+function deviceHTML(node){
+  const inner = (TPL[node.kind]||(()=>''))();
+  if(node.dev==='phone'){
+    return `<div class="frame phone"><div class="scr" style="height:${SIZE.phone.h-14}px"><div class="notch"></div>${inner}</div></div>`;
+  }
+  if(node.dev==='desk'){
+    return `<div><div class="frame browser desk-screen" style="border-radius:8px">${inner}</div><div class="stand"></div><div class="base"></div></div>`;
+  }
+  return `<div class="frame browser">${inner}</div>`;
+}
+
+NODES.forEach(node=>{
+  const el = document.createElement('div');
+  el.className = 'node';
+  el.style.left = node.x+'px';
+  el.style.top = node.y+'px';
+  const sz = SIZE[node.dev];
+  el.style.width = sz.w+'px';
+  el.innerHTML = `<div class="badge">${node.n}</div>${deviceHTML(node)}<div class="caption">${node.title}${node.sub?`<span class="sub">${node.sub}</span>`:''}</div>`;
+  // set frame height
+  const frame = el.querySelector('.frame');
+  if(node.dev!=='phone') frame.style.height = sz.h+'px';
+  world.appendChild(el);
+  nodeEls[node.id] = {el, node, w:sz.w, h:(node.dev==='phone'?sz.h:sz.h)};
+  makeDraggable(el, node);
+});
+
+// clusters (behind nodes)
+CLUSTERS.forEach(cl=>{
+  const d = document.createElement('div');
+  d.className='cluster';
+  d.style.cssText=`left:${cl.x}px;top:${cl.y}px;width:${cl.w}px;height:${cl.h}px;z-index:0`;
+  d.innerHTML=`<div class="clabel"><span class="cdot" style="background:${cl.color}"></span>${cl.label}</div>`;
+  world.insertBefore(d, world.firstChild.nextSibling);
+});
+// ensure nodes above clusters
+Object.values(nodeEls).forEach(o=>o.el.style.zIndex=2);
+
+// ---------- Edges ----------
+function anchor(o, side){
+  const n = o.node, w=o.w, h=o.h;
+  const cx=n.x+w/2, cy=n.y+h/2;
+  switch(side){
+    case 'r': return [n.x+w, cy, 1,0];
+    case 'l': return [n.x, cy, -1,0];
+    case 't': return [cx, n.y, 0,-1];
+    case 'b': return [cx, n.y+h, 0,1];
+  }
+}
+function drawEdges(){
+  let paths = svg.querySelector('defs').outerHTML;
+  EDGES.forEach(e=>{
+    const A=nodeEls[e.f], B=nodeEls[e.t];
+    if(!A||!B) return;
+    const [ax,ay,adx,ady]=anchor(A,e.a);
+    const [bx,by,bdx,bdy]=anchor(B,e.b);
+    const dist=Math.hypot(bx-ax,by-ay);
+    const k=Math.min(120, dist*0.45);
+    const c1x=ax+adx*k, c1y=ay+ady*k;
+    const c2x=bx+bdx*k, c2y=by+bdy*k;
+    const color = e.type==='main'?'#FF601A':(e.type==='rel'?'#C9C6BF':'#C9C6BF');
+    const dash = e.type==='sec'?'stroke-dasharray="5 5"':'';
+    const wdt = e.type==='main'?2:1.4;
+    const op = e.type==='sec'?0.8:1;
+    const mk = e.type==='main'?'url(#arrA)':'url(#arr)';
+    paths += `<path d="M${ax},${ay} C${c1x},${c1y} ${c2x},${c2y} ${bx},${by}" fill="none" stroke="${color}" stroke-width="${wdt}" opacity="${op}" ${dash} marker-end="${mk}"></path>`;
+  });
+  svg.innerHTML = paths;
+}
+
+// ---------- Pan / Zoom ----------
+let tx=0, ty=0, scale=1;
+function apply(){ world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`; }
+
+viewport.addEventListener('mousedown', e=>{
+  if(e.target.closest('.node')) return;
+  viewport.classList.add('panning');
+  const sx=e.clientX-tx, sy=e.clientY-ty;
+  const mv=ev=>{ tx=ev.clientX-sx; ty=ev.clientY-sy; apply(); };
+  const up=()=>{ viewport.classList.remove('panning'); document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+  document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+});
+viewport.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const f = e.deltaY<0 ? 1.1 : 1/1.1;
+  const ns = Math.min(2.2, Math.max(0.25, scale*f));
+  const rx=(e.clientX-tx)/scale, ry=(e.clientY-ty)/scale;
+  scale=ns; tx=e.clientX-rx*scale; ty=e.clientY-ry*scale; apply();
+},{passive:false});
+
+// touch pan
+let lastT=null;
+viewport.addEventListener('touchstart',e=>{ if(e.target.closest('.node'))return; if(e.touches.length===1) lastT=[e.touches[0].clientX-tx,e.touches[0].clientY-ty]; },{passive:true});
+viewport.addEventListener('touchmove',e=>{ if(lastT&&e.touches.length===1){ tx=e.touches[0].clientX-lastT[0]; ty=e.touches[0].clientY-lastT[1]; apply(); } },{passive:true});
+viewport.addEventListener('touchend',()=>lastT=null);
+
+// ---------- Node drag ----------
+function makeDraggable(el, node){
+  el.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    e.stopPropagation();
+    el.classList.add('dragging');
+    const sx=e.clientX, sy=e.clientY, ox=node.x, oy=node.y;
+    const mv=ev=>{
+      node.x=ox+(ev.clientX-sx)/scale;
+      node.y=oy+(ev.clientY-sy)/scale;
+      el.style.left=node.x+'px'; el.style.top=node.y+'px';
+      drawEdges();
+    };
+    const up=()=>{ el.classList.remove('dragging'); document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+  });
+}
+
+// ---------- Fit to view ----------
+function fit(){
+  const pad=80;
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  Object.values(nodeEls).forEach(o=>{
+    minX=Math.min(minX,o.node.x); minY=Math.min(minY,o.node.y);
+    maxX=Math.max(maxX,o.node.x+o.w); maxY=Math.max(maxY,o.node.y+o.h+30);
+  });
+  const w=maxX-minX, h=maxY-minY;
+  const sw=window.innerWidth, sh=window.innerHeight;
+  scale=Math.min(1.4,(sw-pad*2)/w,(sh-pad*2-70)/h);
+  tx=(sw-w*scale)/2 - minX*scale;
+  ty=(sh-h*scale)/2 - minY*scale + 24;
+  apply();
+}
+
+document.getElementById('zin').onclick=()=>{ scale=Math.min(2.2,scale*1.15); apply(); };
+document.getElementById('zout').onclick=()=>{ scale=Math.max(0.25,scale/1.15); apply(); };
+document.getElementById('reset').onclick=fit;
+
+drawEdges();
+fit();
+window.addEventListener('resize', ()=>{ /* keep position */ });
+</script>
+</body>
+</html>
