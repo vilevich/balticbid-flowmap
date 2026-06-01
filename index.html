@@ -6,100 +6,120 @@
 <title>BalticBid — Plūsmu karte</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--canvas:#F4F3F1;--ink:#1A1A1A;--muted:#8A8A86;--line:#E1DED7;--wire:#D7D4CD;--wire2:#ECEAE4;--accent:#FF601A;--card:#FFFFFF;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px -12px rgba(0,0,0,.12);}
+  :root{--canvas:#F4F3F1;--ink:#1A1A1A;--muted:#8A8A86;--line:#E1DED7;--wire:#D7D4CD;--accent:#FF601A;--screen:#FBFAF8;}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;font-family:'Geist',system-ui,sans-serif;color:var(--ink);background:var(--canvas)}
-  .mono{font-family:'Geist Mono',ui-monospace,monospace}
   #viewport{position:fixed;inset:0;cursor:grab;background-image:radial-gradient(circle,#D9D6CF 1px,transparent 1.4px);background-size:26px 26px;}
   #viewport.panning{cursor:grabbing}
   #world{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
   #edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}
   .cluster{position:absolute;border:1px dashed var(--line);border-radius:18px;background:rgba(255,255,255,.30)}
-  .cluster .clabel{position:absolute;top:-11px;left:22px;background:var(--canvas);padding:0 10px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .cluster .clabel{position:absolute;top:-11px;left:22px;background:var(--canvas);padding:0 10px;font-family:'Geist',sans-serif;font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .cluster .cdot{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:7px}
   .node{position:absolute;z-index:2;cursor:pointer}
-  .node .badge{position:absolute;top:-10px;left:-10px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#1A1A1A;font-family:'Geist',sans-serif;font-weight:500;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:3}
+  .node .badge{position:absolute;top:-10px;left:-10px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#1A1A1A;font-weight:500;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:3}
   .node .frame{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:border-color .15s}
   .node:hover .frame{border-color:#9A9A96}
   .node.sel .frame{border-color:var(--accent)}
-  .node .caption{margin-top:9px;text-align:center;font-family:'Geist',sans-serif;font-size:11px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}
+  .node .caption{margin-top:9px;text-align:center;font-size:11px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}
   .node .sub{display:block;font-weight:400;font-size:10.5px;color:var(--muted);margin-top:2px}
-  /* chrome */
-  .browser .bar{height:22px;background:#F6F5F2;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:5px;padding:0 9px}
-  .browser .dot{width:6px;height:6px;border-radius:50%}
-  .browser .url{flex:1;height:13px;background:#fff;border:1px solid var(--line);border-radius:4px;margin-left:6px;display:flex;align-items:center;padding:0 6px;font-size:6px;color:#9A9A96}
-  .phone{padding:7px;background:#EFEDE8;border-radius:22px}
-  .phone .scr{border-radius:14px;overflow:hidden;background:#fff}
-  .phone .notch{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:42px;height:5px;border-radius:3px;background:#CFCCC4;z-index:4}
-  .desk .stand{height:14px;background:#EFEDE8;margin:0 auto;width:38%;border-radius:0 0 4px 4px}
+  .phone{padding:6px;background:#EFEDE8;border-radius:20px;border:1px solid var(--line)}
+  .phone .frame{border:none}
+  .pscr{background:#fff}
+  .notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:74px;height:9px;border-radius:5px;background:#D8D5CD;z-index:5}
+  .desk .stand{height:14px;background:#EFEDE8;margin:0 auto;width:38%;border-radius:0 0 5px 5px}
   .desk .base{height:6px;background:#E1DED7;width:54%;margin:4px auto 0;border-radius:3px}
 
-  /* ---- realistic mini-UI ---- */
-  .ui{font-family:'Geist',sans-serif;color:#1A1A1A;font-size:6px;line-height:1.35}
-  .ui .h{display:flex;align-items:center;gap:5px;height:15px;border-bottom:1px solid var(--line);padding:0 6px;background:#fff;flex:none}
-  .ui .lg{font-weight:600;font-size:6.5px;letter-spacing:-.02em}
-  .ui .lgm{width:6px;height:6px;background:var(--accent);border-radius:1px;flex:none}
-  .ui .nav{color:#9A9A96;font-size:5.5px;white-space:nowrap}
-  .ui .nav.act{color:#1A1A1A}
-  .ui .sp{flex:1}
-  .ui .glob{width:7px;height:7px;border:1px solid #9A9A96;border-radius:50%;flex:none}
-  .ui .ham{width:8px;height:6px;flex:none;background:linear-gradient(#1A1A1A 1px,transparent 1px,transparent 2.5px,#1A1A1A 2.5px,#1A1A1A 3.5px,transparent 3.5px,transparent 5px,#1A1A1A 5px)}
-  .ui .pill{font-size:5px;border:1px solid var(--line);border-radius:2px;padding:2px 4px;white-space:nowrap}
-  .ui .pill.dark{background:#1A1A1A;color:#fff;border-color:#1A1A1A}
-  .ui .pad{padding:6px}
-  .ui .ph{background:linear-gradient(#DCE2E6,#ECE8E1);position:relative;overflow:hidden;border-radius:2px}
-  .ui .ph .sun{position:absolute;top:12%;right:16%;width:13%;aspect-ratio:1;border-radius:50%;background:#EAC9A2}
-  .ui .ph .mach{position:absolute;left:30%;bottom:26%;width:40%;height:26%;background:#7E7A70;border-radius:1px}
-  .ui .ph .mach::before{content:"";position:absolute;left:6%;bottom:-32%;width:24%;padding-bottom:24%;background:#56534b;border-radius:50%}
-  .ui .ph .mach::after{content:"";position:absolute;right:8%;bottom:-42%;width:32%;padding-bottom:32%;background:#56534b;border-radius:50%}
-  .ui .ph .grd{position:absolute;left:0;right:0;bottom:0;height:28%;background:linear-gradient(#C7C1B2,#B4AE9C)}
-  .ui .lab{font-family:'Geist Mono',monospace;font-size:4.5px;letter-spacing:.06em;text-transform:uppercase;color:#9A9A96}
-  .ui .t{font-weight:600}
-  .ui .muted{color:#9A9A96}
-  .ui .price{font-weight:600;letter-spacing:-.02em}
-  .ui .big{font-weight:600;letter-spacing:-.03em;line-height:1}
-  .ui .btn{height:11px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:5px;font-weight:500;white-space:nowrap}
-  .ui .btn.acc{background:var(--accent);color:#1A1A1A}
-  .ui .btn.dark{background:#1A1A1A;color:#fff}
-  .ui .btn.out{border:1px solid var(--line);background:#fff}
-  .ui .fld{height:12px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;padding:0 4px;font-size:5px;color:#9A9A96;background:#fff;margin:3px 0}
-  .ui .fld.v{color:#1A1A1A;font-weight:500}
-  .ui .tabs{display:flex;gap:3px}
-  .ui .tab{font-size:5px;padding:2px 5px;border:1px solid var(--line);border-radius:2px;white-space:nowrap}
-  .ui .tab.act{background:#1A1A1A;color:#fff;border-color:#1A1A1A}
-  .ui .badge{font-size:4.5px;padding:1.5px 4px;border-radius:5px;white-space:nowrap;display:inline-block}
-  .ui .badge.g{background:#D6EFD6;color:#236B23}
-  .ui .badge.o{background:#FFE0D0;color:#B5430F}
-  .ui .badge.n{background:#EAE7E0;color:#555}
-  .ui .side{width:35%;border-right:1px solid var(--line);background:#FAFAF8;padding:5px;flex:none}
-  .ui .si{font-size:5px;padding:2.5px 4px;color:#9A9A96;border-radius:2px;margin-bottom:1px}
-  .ui .si.act{color:#fff;background:#1A1A1A;font-weight:500}
-  .ui .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
-  .ui .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
-  .ui .row{display:flex;gap:4px}
-  .ui .col{display:flex;flex-direction:column}
-  .ui .bdy{display:flex;height:calc(100% - 15px)}
-  .ui .bdyb{display:flex;height:calc(100% - 37px)}
-  .ui .main{padding:6px;flex:1;min-width:0}
-  .ui table{width:100%;border-collapse:collapse;font-size:5px}
-  .ui td{border-bottom:1px solid var(--wire2);padding:2.5px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ui td.b{font-weight:600}
-  .ui .div{height:1px;background:var(--line);margin:5px 0}
-  .ui .cnt{height:17px;border:1px solid var(--line);border-radius:2px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:9px;flex:1;background:#FAFAF8}
-  .ui .thumb{width:24px;height:16px;flex:none}
-  .ui .panel{border:1px solid var(--line);border-radius:3px;padding:5px}
-  .ui .toggle{width:14px;height:8px;border-radius:5px;background:var(--accent);position:relative;flex:none}
-  .ui .toggle.off{background:var(--wire)}
-  .ui .toggle::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:#fff;top:1px;right:1px}
-  .ui .toggle.off::after{right:auto;left:1px}
-  .ui .ico{width:11px;height:11px;border-radius:2px;background:#FFE0D0;flex:none}
-  .ui .stat{border:1px solid var(--line);border-radius:3px;padding:4px}
+  /* ===== reusable wireframe component system (real sizes) ===== */
+  .s{font-family:'Geist',sans-serif;color:var(--ink);background:var(--screen);line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+  .s *{box-sizing:border-box}
+  .chrome{height:34px;background:#F1EFEA;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 14px;flex:none}
+  .chrome .d{width:10px;height:10px;border-radius:50%}
+  .chrome .u{flex:1;height:20px;background:#fff;border:1px solid var(--line);border-radius:6px;margin-left:8px;display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--muted)}
+  .tb{height:50px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#fff;flex:none}
+  .tb-l,.tb-r{display:flex;align-items:center;gap:18px}
+  .bmk{width:16px;height:16px;background:var(--accent);border-radius:3px}
+  .brand{font-weight:600;font-size:17px;letter-spacing:-.02em}
+  .nav{font-size:14px;color:var(--muted)}
+  .nav.on{color:var(--ink)}
+  .srch{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:9px 16px;background:#fff;min-width:190px}
+  .globe2{width:18px;height:18px;border:1.5px solid var(--muted);border-radius:50%}
+  .ham{width:18px;height:13px;background:linear-gradient(var(--ink) 1.5px,transparent 1.5px,transparent 5.5px,var(--ink) 5.5px,var(--ink) 7px,transparent 7px,transparent 11px,var(--ink) 11px)}
+  .btn{font-size:13px;border-radius:5px;padding:8px 15px;white-space:nowrap;font-weight:500;display:inline-flex;align-items:center;justify-content:center}
+  .btn.ghost{border:1px solid var(--line)}
+  .btn.dark{background:var(--ink);color:#fff}
+  .btn.acc{background:var(--accent);color:var(--ink)}
+  .btn.out{border:1px solid var(--line);background:#fff}
+  .btn.sm{font-size:12px;padding:6px 11px}
+  .body{flex:1;display:flex;min-height:0}
+  .main{flex:1;padding:18px;min-width:0;overflow:hidden}
+  .pad{padding:18px}
+  .h1{font-size:22px;font-weight:600;letter-spacing:-.02em}
+  .h2{font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .muted{color:var(--muted);font-size:13px}
+  .price{font-weight:600;letter-spacing:-.02em}
+  .row{display:flex;gap:12px}
+  .col{display:flex;flex-direction:column}
+  .between{display:flex;align-items:center;justify-content:space-between}
+  .photo{background:linear-gradient(#D7E0E6,#EDE9E2);position:relative;overflow:hidden;border-radius:5px}
+  .photo .sun{position:absolute;top:14%;right:15%;width:16%;aspect-ratio:1;border-radius:50%;background:#EEC79A}
+  .photo .mach{position:absolute;left:30%;bottom:30%;width:40%;height:22%;background:#76726a;border-radius:3px}
+  .photo .mach::before{content:"";position:absolute;left:6%;bottom:-30%;width:30%;padding-bottom:30%;background:#4f4c46;border-radius:50%}
+  .photo .mach::after{content:"";position:absolute;right:4%;bottom:-44%;width:42%;padding-bottom:42%;background:#4f4c46;border-radius:50%}
+  .photo .grd{position:absolute;left:0;right:0;bottom:0;height:26%;background:linear-gradient(#C4BEAF,#B0AA98)}
+  .grid{display:grid;gap:14px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .pc .photo{height:78px}
+  .pc .lab{margin-top:7px}
+  .pc .ti{font-weight:600;font-size:13px;margin-top:2px}
+  .pc .pr{font-weight:600;font-size:15px;margin-top:1px}
+  .fld{height:38px;border:1px solid var(--line);border-radius:5px;background:#fff;display:flex;align-items:center;padding:0 11px;font-size:13px;color:var(--muted)}
+  .fld.has{color:var(--ink);font-weight:500}
+  .fwrap{margin-bottom:10px}
+  .flab{font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase}
+  .bdg{font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;white-space:nowrap;display:inline-block}
+  .bdg.n{background:#EAE7E0;color:#555}
+  .bdg.g{background:#D6EFD6;color:#236B23}
+  .bdg.o{background:#FFE0D0;color:#B5430F}
+  .bdg.r{background:#F6D8D2;color:#A23B22}
+  .sb{width:34%;border-right:1px solid var(--line);background:#fff;padding:12px;flex:none}
+  .sbi{font-size:12.5px;padding:8px 11px;color:var(--muted);border-radius:6px;margin-bottom:2px}
+  .sbi.on{background:var(--ink);color:#fff;font-weight:500}
+  .sbhead{display:flex;align-items:center;gap:8px;padding:0 4px 11px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+  .ava{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+  .tabs{display:flex;gap:6px;margin-bottom:14px}
+  .tab{font-size:12.5px;padding:7px 14px;border:1px solid var(--line);border-radius:6px;color:var(--muted)}
+  .tab.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:500}
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .tbl td{border-bottom:1px solid #ECEAE4;padding:9px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbl td.b{font-weight:600}
+  .tbl .hd td{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+  .panel{border:1px solid var(--line);border-radius:7px;padding:14px;background:#fff}
+  .lrow{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:7px;padding:9px;margin-bottom:9px;background:#fff}
+  .lthumb{width:64px;height:44px;flex:none;border-radius:4px}
+  .cnt{flex:1;height:44px;border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:20px;background:#fff}
+  .div{height:1px;background:var(--line);margin:13px 0}
+  .toggle{width:34px;height:20px;border-radius:11px;background:var(--accent);position:relative;flex:none}
+  .toggle.off{background:var(--wire)}
+  .toggle::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;right:3px}
+  .toggle.off::after{right:auto;left:3px}
+  .stat{border:1px solid var(--line);border-radius:7px;padding:13px;background:#fff}
+  .stat .v{font-size:22px;font-weight:600;letter-spacing:-.02em}
+  .ico{width:30px;height:30px;border-radius:6px;background:#FFE0D0;flex:none}
+  .check{width:16px;height:16px;border:1.5px solid var(--muted);border-radius:3px;flex:none}
+  .center{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .step{display:flex;align-items:center;gap:7px}
+  .stepn{width:20px;height:20px;border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center;background:var(--wire);color:var(--muted)}
+  .stepn.on{background:var(--accent);color:var(--ink)}
+  .stepn.done{background:var(--ink);color:#fff}
 
   /* toolbar */
   #bar{position:fixed;top:16px;left:16px;right:16px;display:flex;align-items:center;gap:14px;z-index:100;pointer-events:none}
-  #bar .panel{pointer-events:auto;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px}
+  #bar .panel{pointer-events:auto;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px;padding:0}
   #title{padding:10px 16px;display:flex;align-items:center;gap:12px}
   #title .mark{width:18px;height:18px;background:var(--accent);border-radius:3px}
   #title b{font-weight:600;font-size:15px;letter-spacing:-.01em}
@@ -110,19 +130,19 @@
   #ctrls{display:flex;gap:6px;padding:7px}
   #ctrls button{pointer-events:auto;width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:16px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
   #ctrls button:hover{border-color:var(--ink)}
-  #ctrls button.wide{width:auto;padding:0 12px;font-size:12px;font-family:'Geist Mono',monospace;letter-spacing:.04em}
+  #ctrls button.wide{width:auto;padding:0 12px;font-size:12px;letter-spacing:.04em}
   /* drawer */
   #drawer{position:fixed;top:0;right:0;height:100%;width:380px;max-width:88vw;background:#fff;border-left:1px solid var(--line);transform:translateX(100%);transition:transform .26s cubic-bezier(.16,1,.3,1);z-index:200;display:flex;flex-direction:column}
   #drawer.open{transform:translateX(0)}
   #drawer .dh{padding:22px 22px 16px;border-bottom:1px solid var(--line)}
-  #drawer .dnum{font-family:'Geist Mono',monospace;font-size:12px;color:var(--accent)}
+  #drawer .dnum{font-size:12px;letter-spacing:.06em;color:var(--accent);font-weight:500}
   #drawer h2{margin:6px 0 4px;font-size:21px;letter-spacing:-.02em}
   #drawer .dsub{font-size:13px;color:var(--muted)}
-  #drawer .rolechip{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:6px;background:#F4F3F1;color:var(--ink)}
+  #drawer .rolechip{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:6px;background:#F4F3F1;color:var(--ink);font-weight:500}
   #drawer .rolechip i{width:7px;height:7px;border-radius:2px;font-style:normal}
   #drawer .db{padding:20px 22px;overflow:auto;flex:1}
   #drawer .sec{margin-bottom:20px}
-  #drawer .sec h3{font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+  #drawer .sec h3{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 9px;font-weight:600}
   #drawer .sec p{margin:0;font-size:13.5px;line-height:1.55;color:#333}
   #drawer ul{margin:0;padding:0;list-style:none}
   #drawer li{font-size:13px;line-height:1.5;color:#333;padding-left:16px;position:relative;margin-bottom:6px}
@@ -132,17 +152,13 @@
   #drawer .dclose{position:absolute;top:18px;right:18px;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:15px;color:var(--muted)}
   #drawer .dclose:hover{border-color:var(--ink);color:var(--ink)}
   #hint{position:fixed;bottom:16px;left:16px;z-index:100;font-size:11.5px;color:var(--muted);background:rgba(255,255,255,.8);border:1px solid var(--line);border-radius:8px;padding:8px 12px;backdrop-filter:blur(8px)}
-  #foot{position:fixed;bottom:16px;right:16px;z-index:100;font-family:'Geist Mono',monospace;font-size:11px;color:var(--muted)}
+  #foot{position:fixed;bottom:16px;right:16px;z-index:100;font-size:11px;color:var(--muted);letter-spacing:.04em}
 </style>
 </head>
 <body>
 <div id="bar">
-  <div class="panel" id="title"><div class="mark"></div><b>BalticBid</b><span>Plūsmu karte · v4.0</span></div>
-  <div class="panel" id="legend">
-    <div class="lg"><span class="sw" style="background:#FF601A"></span>Galvenā plūsma</div>
-    <div class="lg"><span class="sw" style="background:#C9C6BF"></span>Saistīta</div>
-    <div class="lg"><span class="sw" style="background:#fff;border:1px dashed #B9B6AE"></span>Sekundāra</div>
-  </div>
+  <div class="panel" id="title"><div class="mark"></div><b>BalticBid</b><span>Plūsmu karte · v5.0</span></div>
+  <div class="panel" id="legend"><div class="lg"><span class="sw" style="background:#FF601A"></span>Galvenā plūsma</div><div class="lg"><span class="sw" style="background:#C9C6BF"></span>Saistīta</div><div class="lg"><span class="sw" style="background:#fff;border:1px dashed #B9B6AE"></span>Sekundāra</div></div>
   <div class="panel" id="ctrls"><button id="zin">+</button><button id="zout">−</button><button id="reset" class="wide">FIT</button></div>
 </div>
 <div id="viewport"><div id="world"><svg id="edges"><defs>
@@ -158,104 +174,113 @@
 
 <script>
 const ROLES={public:{label:'Publisks',color:'#3A3A3A'},user:{label:'Lietotājs',color:'#FF601A'},admin:{label:'Admin',color:'#7A7A76'},system:{label:'Sistēma',color:'#B0ADA6'}};
+const PRODS=[['CLAAS · 2020','Arion 650','71 000 €'],['NEW HOLLAND · 2017','T7.270','58 200 €'],['DEUTZ-FAHR · 2015','6155','19 500 €'],['JOHN DEERE · 2019','6155M','52 900 €'],['FENDT · 2016','724 Vario','54 000 €'],['KRONE · 2019','BiG Pack 1290','67 000 €']];
 
-// ---------- realistic UI builders ----------
-const PH=(h)=>`<div class="ph" style="height:${h}px"><div class="sun"></div><div class="mach"></div><div class="grd"></div></div>`;
-function headB(act){return `<div class="bar"><div class="dot" style="background:#E08585"></div><div class="dot" style="background:#E0C285"></div><div class="dot" style="background:#9FD09F"></div><div class="url">balticbid.lv</div></div>`+
-  `<div class="h"><div class="lgm"></div><div class="lg">BalticBid</div><div class="nav ${act==='cat'?'act':''}">Katalogs</div><div class="nav">Kā tas strādā</div><div class="sp"></div><div class="glob"></div><div class="pill">Ienākt</div><div class="pill dark">Reģistrēties</div></div>`}
-function headP(){return `<div class="h"><div class="lgm"></div><div class="lg">BalticBid</div><div class="sp"></div><div class="glob"></div><div class="ham"></div></div>`}
-function headA(act){const items=['Pārskats','Loti','Lietotāji','Dokumenti','Kategorijas'];
-  return `<div class="bar"><div class="dot" style="background:#E08585"></div><div class="dot" style="background:#E0C285"></div><div class="dot" style="background:#9FD09F"></div><div class="url">balticbid.lv/admin</div></div>`}
-function adminSide(act){const items=['Pārskats','Loti','Lietotāji','Dokumenti','Kategorijas'];
-  return `<div class="side"><div class="row" style="align-items:center;gap:3px;margin-bottom:4px"><div class="lgm"></div><span class="lg" style="font-size:5.5px">BalticBid</span><span class="badge o" style="margin-left:auto">Admin</span></div>${items.map((t,i)=>`<div class="si ${i===act?'act':''}">${t}</div>`).join('')}</div>`}
-function profSide(act){const items=['Pamatdati','Mani solījumi','Favorīti','Dokumenti','Iestatījumi','Drošība'];
-  return `<div class="side"><div class="row" style="align-items:center;gap:3px;margin-bottom:5px"><div style="width:11px;height:11px;border-radius:50%;background:#1A1A1A;color:#fff;font-size:4.5px;display:flex;align-items:center;justify-content:center;flex:none">JB</div><span class="t" style="font-size:5px">Jānis B.</span></div>${items.map((t,i)=>`<div class="si ${i===act?'act':''}">${t}</div>`).join('')}</div>`}
-const pcard=(by,nm,pr)=>`<div class="col">${PH(26)}<div class="lab" style="margin-top:3px">${by}</div><div class="t" style="font-size:5.5px">${nm}</div><div class="price" style="font-size:6.5px">${pr}</div></div>`;
-const PRODS=[['CLAAS · 2020','Arion 650','71 000 €'],['NEW HOLLAND · 2017','T7.270','58 200 €'],['DEUTZ-FAHR · 2015','6155','19 500 €'],['JOHN DEERE · 2019','6155M','52 900 €'],['FENDT · 2016','724 Vario','54 000 €'],['KRONE · 2019','BiG Pack','67 000 €']];
-const grid=(n)=>`<div class="g3">${PRODS.slice(0,n).map(p=>pcard(p[0],p[1],p[2])).join('')}</div>`;
+/* ===== reusable components ===== */
+const C={
+  chrome:(u='balticbid.lv')=>`<div class="chrome"><span class="d" style="background:#E08585"></span><span class="d" style="background:#E5C07A"></span><span class="d" style="background:#9CCB9C"></span><span class="u">${u}</span></div>`,
+  topbar:(act)=>`<div class="tb"><div class="tb-l"><span class="bmk"></span><span class="brand">BalticBid</span><span class="nav ${act==='cat'?'on':''}">Katalogs</span><span class="nav">Kā tas strādā</span></div><div class="tb-r"><span class="srch">Meklēt tehniku…</span><span class="globe2"></span><span class="btn ghost">Ienākt</span><span class="btn dark">Reģistrēties</span></div></div>`,
+  topbarP:()=>`<div class="tb" style="padding:0 16px"><span class="bmk"></span><span class="brand" style="margin-left:8px">BalticBid</span><span style="flex:1"></span><span class="globe2"></span><span class="ham" style="margin-left:14px"></span></div>`,
+  photo:(h,w)=>`<div class="photo" style="height:${h}px${w?';width:'+w+'px':''}"><span class="sun"></span><span class="mach"></span><span class="grd"></span></div>`,
+  pcard:(p)=>`<div class="pc col">${C.photo(78)}<div class="lab">${p[0]}</div><div class="ti">${p[1]}</div><div class="pr">${p[2]}</div></div>`,
+  grid:(n,cols=3)=>`<div class="grid g${cols}">${PRODS.slice(0,n).map(C.pcard).join('')}</div>`,
+  field:(label,val,ph)=>`<div class="fwrap"><div class="flab">${label}</div><div class="fld ${val?'has':''}">${val||ph||''}</div></div>`,
+  sidebar:(items,act,head)=>`<div class="sb">${head||''}${items.map((t,i)=>`<div class="sbi ${i===act?'on':''}">${t}</div>`).join('')}</div>`,
+  profHead:()=>`<div class="sbhead"><span class="ava">JB</span><span style="font-weight:600;font-size:12.5px">Jānis B.</span></div>`,
+  adminHead:()=>`<div class="sbhead"><span class="bmk"></span><span style="font-weight:600;font-size:12.5px">BalticBid</span><span class="bdg o" style="margin-left:auto">Admin</span></div>`,
+  tabs:(items,act)=>`<div class="tabs">${items.map((t,i)=>`<span class="tab ${i===act?'on':''}">${t}</span>`).join('')}</div>`,
+  table:(head,rows)=>`<table class="tbl"><tr class="hd">${head.map(h=>`<td>${h}</td>`).join('')}</tr>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i===0?' class="b"':''}>${c}</td>`).join('')}</tr>`).join('')}</table>`,
+  btn:(t,v='dark',extra='')=>`<span class="btn ${v}" style="${extra}">${t}</span>`,
+};
+const PROFNAV=['Pamatdati','Mani solījumi','Favorīti','Dokumenti','Iestatījumi','Drošība'];
+const ADMNAV=['Pārskats','Loti','Lietotāji','Dokumenti','Kategorijas'];
 
-const TPL={
-  catalog:()=>headB('cat')+`<div class="bdyb"><div class="side"><div class="t" style="font-size:5.5px;margin-bottom:3px">Filtri</div><div class="lab">Kārtot</div><div class="fld v">Tuvākais beigām</div><div class="lab" style="margin-top:3px">Marka</div><div class="fld"></div><div class="lab" style="margin-top:3px">Cena, €</div><div class="row"><div class="fld" style="flex:1">No</div><div class="fld" style="flex:1">Līdz</div></div></div><div class="main"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px"><span class="muted">8 rezultāti</span><span class="pill">Tuvākais beigām ⌄</span></div>${grid(6)}</div></div>`,
-  search:()=>headB()+`<div class="pad"><div class="row" style="align-items:center;margin-bottom:4px"><div class="fld" style="flex:1;margin:0">Meklēt „John Deere”…</div><div class="btn dark" style="width:30px">Meklēt</div></div><div class="muted" style="margin-bottom:4px">12 rezultāti</div>${grid(6)}</div>`,
-  category:()=>headB()+`<div class="pad"><div class="t" style="font-size:8px;margin-bottom:3px">Traktori</div><div class="tabs" style="margin-bottom:5px"><span class="tab act">Visi</span><span class="tab">John Deere</span><span class="tab">CLAAS</span><span class="tab">Fendt</span></div>${grid(6)}</div>`,
-  detail:()=>headB()+`<div class="row" style="padding:6px;gap:6px;height:calc(100% - 37px)"><div style="flex:1.25">${PH(54)}<div class="row" style="margin-top:4px">${PH(13).replace('class="ph"','class="ph thumb"').repeat(4)}</div><div class="lab" style="margin-top:5px">CLAAS · TRAKTORI</div><div class="t" style="font-size:8px">CLAAS Arion 650</div><div class="div"></div><div class="row" style="gap:5px">${[['Gads','2020'],['Mst.','1 850'],['Stāv.','Labs'],['Vieta','Tartu']].map(s=>`<div class="col"><div class="lab">${s[0]}</div><div class="t" style="font-size:5px">${s[1]}</div></div>`).join('')}</div></div><div style="flex:1" class="panel"><div class="lab">Pašreizējā cena</div><div class="big" style="font-size:12px">71 000 €</div><div class="muted" style="font-size:5px">9 solījumi · solis 1 000 €</div><div class="badge o" style="margin-top:3px">Rezerve nav sasniegta</div><div class="div"></div><div class="lab">Beidzas pēc</div><div class="row" style="margin:3px 0">${['00','01','58','12'].map(x=>`<div class="cnt">${x}</div>`).join('')}</div><div class="fld v">72 000 €</div><div class="btn acc" style="margin-top:3px">Solīt 72 000 €</div><div class="muted" style="font-size:4.5px;margin-top:3px">+ pircēja prēmija 5%</div></div></div>`,
-  modal:()=>headP()+`<div style="position:relative;height:265px;background:#F2F1EE"><div class="pad" style="opacity:.5">${grid(3).replace(/26px/g,'20px')}</div><div style="position:absolute;inset:0;background:rgba(20,20,20,.18);display:flex;align-items:center;justify-content:center"><div style="width:84%;background:#fff;border:1px solid var(--line);border-radius:4px;padding:7px;box-shadow:0 8px 20px -8px rgba(0,0,0,.3)"><div class="t" style="font-size:7px">Apstiprini solījumu</div><div class="muted" style="font-size:5px;margin:2px 0 4px">Tu sols 72 000 € par CLAAS Arion 650.</div><div class="panel" style="background:#FAFAF8"><div class="row" style="justify-content:space-between"><span class="muted">Solījuma summa</span><span class="t">72 000 €</span></div><div class="row" style="justify-content:space-between"><span class="muted">Pircēja prēmija (5%)</span><span>3 600 €</span></div><div class="div"></div><div class="row" style="justify-content:space-between"><span class="t">Kopā</span><span class="t">75 600 €</span></div></div><div class="row" style="align-items:center;gap:3px;margin:4px 0"><div style="width:7px;height:7px;border:1px solid #9A9A96;border-radius:1px"></div><span style="font-size:5px">Solījums ir saistošs.</span></div><div class="row"><div class="btn out" style="flex:1">Atcelt</div><div class="btn acc" style="flex:1">Apstiprināt</div></div></div></div></div>`,
-  history:()=>headP()+`<div style="position:relative;height:265px;background:#F2F1EE"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:86%;background:#fff;border:1px solid var(--line);border-radius:4px;padding:7px"><div class="t" style="font-size:6.5px;margin-bottom:4px">Solījumu vēsture</div><table>${[['K.T.','71 000 €','14:32'],['Tu','70 000 €','14:30'],['M.B.','69 000 €','14:21'],['K.T.','68 000 €','13:58'],['A.L.','67 000 €','13:40']].map(r=>`<tr><td class="mono">${r[0]}</td><td class="b">${r[1]}</td><td class="muted" style="text-align:right">${r[2]}</td></tr>`).join('')}</table></div></div></div>`,
-  qa:()=>headB()+`<div class="pad"><div class="t" style="font-size:6.5px;margin-bottom:4px">Jautājumi par lotu</div>${[['Vai ir servisa grāmatiņa?','Jā, pilna vēsture pieejama.'],['Cik īpašnieku?','Viens, dīleris.']].map(q=>`<div class="panel" style="margin-bottom:4px"><div class="t" style="font-size:5px">${q[0]}</div><div class="muted" style="font-size:5px">${q[1]}</div></div>`).join('')}<div class="row"><div class="fld" style="flex:1;margin:0">Uzdod jautājumu…</div><div class="btn acc" style="width:26px">Sūtīt</div></div></div>`,
-  win:()=>headB()+`<div class="pad"><div class="badge g" style="display:block;padding:4px;text-align:center;margin-bottom:5px">Tu uzvarēji izsoli!</div><div class="row" style="gap:5px">${PH(40).replace('height:40px','height:40px;width:44%')}<div class="col" style="flex:1"><div class="lab">CLAAS · 2020</div><div class="t" style="font-size:6px">CLAAS Arion 650</div><div class="muted" style="font-size:5px">Uzvaras cena</div><div class="price" style="font-size:8px">71 000 €</div><div class="btn out" style="margin-top:4px;width:70%">Skatīt dokumentus</div></div></div><div class="muted" style="font-size:5px;margin-top:5px">Sazināsimies par norēķinu un dokumentiem.</div></div>`,
+/* ===== screens (composed from components, real sizes) ===== */
+const SCREENS={
+  catalog:()=>C.chrome()+C.topbar('cat')+`<div class="body"><div class="sb"><div class="h2" style="font-size:15px;margin-bottom:10px">Filtri</div><div class="fwrap"><div class="flab">Kārtot</div><div class="fld has">Tuvākais beigām ⌄</div></div><div class="fwrap"><div class="flab">Marka</div><div class="fld"></div></div><div class="fwrap"><div class="flab">Cena, €</div><div class="row"><div class="fld" style="flex:1">No</div><div class="fld" style="flex:1">Līdz</div></div></div></div><div class="main"><div class="between" style="margin-bottom:12px"><span class="muted">8 rezultāti</span><span class="btn out sm">Tuvākais beigām ⌄</span></div>${C.grid(6)}</div></div>`,
+  search:()=>C.chrome()+C.topbar()+`<div class="main"><div class="row" style="align-items:center;margin-bottom:12px"><div class="fld has" style="flex:1">Meklēt „John Deere”…</div>${C.btn('Meklēt','dark')}</div><div class="muted" style="margin-bottom:12px">12 rezultāti</div>${C.grid(6)}</div>`,
+  category:()=>C.chrome()+C.topbar('cat')+`<div class="main"><div class="h1" style="margin-bottom:10px">Traktori</div>${C.tabs(['Visi','John Deere','CLAAS','Fendt'],0)}${C.grid(6)}</div>`,
+  detail:()=>C.chrome()+C.topbar()+`<div class="body"><div class="main" style="flex:1.3">${C.photo(150)}<div class="row" style="margin-top:8px">${C.photo(46,72)}${C.photo(46,72)}${C.photo(46,72)}${C.photo(46,72)}</div><div class="lab" style="margin-top:14px">CLAAS · TRAKTORI</div><div class="h1">CLAAS Arion 650</div><div class="div"></div><div class="row" style="gap:22px">${[['Gads','2020'],['Motorstundas','1 850'],['Stāvoklis','Labs'],['Vieta','Tartu']].map(s=>`<div class="col"><div class="lab">${s[0]}</div><div style="font-weight:600;font-size:13px;margin-top:3px">${s[1]}</div></div>`).join('')}</div></div><div style="width:40%;padding:18px"><div class="panel"><div class="lab">Pašreizējā cena</div><div style="font-size:30px;font-weight:600;letter-spacing:-.03em;margin:2px 0">71 000 €</div><div class="muted" style="font-size:12px">9 solījumi · solis 1 000 €</div><div class="bdg o" style="margin-top:8px">Rezerve nav sasniegta</div><div class="div"></div><div class="lab">Beidzas pēc</div><div class="row" style="margin:8px 0">${['00','01','58','12'].map(x=>`<div class="cnt">${x}</div>`).join('')}</div><div class="fld has" style="height:42px;font-size:15px">72 000 €</div><div class="btn acc" style="width:100%;margin-top:8px;height:42px;font-size:14px">Solīt 72 000 €</div><div class="muted" style="font-size:11px;margin-top:8px">Visi solījumi ir saistoši. + pircēja prēmija 5%</div></div></div></div>`,
+  modal:()=>C.topbarP()+`<div style="flex:1;position:relative;background:#F2F1EE"><div style="padding:14px;opacity:.4">${C.grid(2,2)}</div><div style="position:absolute;inset:0;background:rgba(20,20,20,.2);display:flex;align-items:center;justify-content:center;padding:18px"><div class="panel" style="width:100%"><div class="h2">Apstiprini solījumu</div><div class="muted" style="font-size:12px;margin:4px 0 12px">Tu sols 72 000 € par CLAAS Arion 650.</div><div class="panel" style="background:#FBFAF8;padding:11px"><div class="between" style="font-size:13px;margin-bottom:5px"><span class="muted">Solījuma summa</span><span style="font-weight:600">72 000 €</span></div><div class="between" style="font-size:13px"><span class="muted">Pircēja prēmija (5%)</span><span>3 600 €</span></div><div class="div" style="margin:9px 0"></div><div class="between"><span style="font-weight:600">Kopā</span><span style="font-weight:600">75 600 €</span></div></div><div class="row" style="align-items:center;gap:8px;margin:12px 0"><span class="check"></span><span style="font-size:12px">Solījums ir saistošs.</span></div><div class="row">${C.btn('Atcelt','out','flex:1')}${C.btn('Apstiprināt','acc','flex:1')}</div></div></div></div>`,
+  history:()=>C.topbarP()+`<div style="flex:1;background:#F2F1EE;display:flex;align-items:center;justify-content:center;padding:18px"><div class="panel" style="width:100%"><div class="h2" style="margin-bottom:10px">Solījumu vēsture</div>${C.table(['Solītājs','Summa','Laiks'],[['K.T.','71 000 €','14:32'],['Tu','70 000 €','14:30'],['M.B.','69 000 €','14:21'],['K.T.','68 000 €','13:58'],['A.L.','67 000 €','13:40']])}</div></div>`,
+  qa:()=>C.chrome()+C.topbar()+`<div class="main"><div class="h2" style="margin-bottom:12px">Jautājumi par lotu</div>${[['Vai ir servisa grāmatiņa?','Jā, pilna vēsture pieejama.'],['Cik īpašnieku bijis?','Viens, oficiālais dīleris.']].map(q=>`<div class="panel" style="margin-bottom:10px;padding:11px"><div style="font-weight:600;font-size:13px">${q[0]}</div><div class="muted" style="font-size:12px;margin-top:3px">${q[1]}</div></div>`).join('')}<div class="row" style="align-items:center"><div class="fld" style="flex:1">Uzdod jautājumu…</div>${C.btn('Sūtīt','acc')}</div></div>`,
+  win:()=>C.chrome()+C.topbar()+`<div class="main"><div class="bdg g" style="display:block;text-align:center;padding:9px;font-size:13px;margin-bottom:14px">Tu uzvarēji izsoli!</div><div class="row" style="gap:14px">${C.photo(96,'46%')}<div class="col" style="flex:1"><div class="lab">CLAAS · 2020</div><div class="h2">CLAAS Arion 650</div><div class="muted" style="font-size:12px;margin-top:4px">Uzvaras cena</div><div class="price" style="font-size:22px">71 000 €</div><div class="btn out" style="margin-top:10px;width:70%">Skatīt dokumentus</div></div></div><div class="muted" style="font-size:12px;margin-top:14px">Sazināsimies par norēķinu un nepieciešamajiem dokumentiem.</div></div>`,
 
-  role:()=>headP()+`<div class="pad"><div class="t" style="font-size:7px">Reģistrācija</div><div class="muted" style="font-size:5px;margin-bottom:5px">Izvēlies konta veidu</div>${[['Privātpersona','Fiziska persona'],['Uzņēmums','Ar PVN un VIES']].map(o=>`<div class="panel" style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><div class="ico"></div><div class="col"><div class="t" style="font-size:5.5px">${o[0]}</div><div class="muted" style="font-size:4.5px">${o[1]}</div></div></div>`).join('')}<div class="muted" style="font-size:5px;text-align:center;margin-top:3px">Jau ir konts? Ienākt</div></div>`,
-  form:()=>headP()+`<div class="pad"><div class="t" style="font-size:6.5px">Uzņēmuma konts</div><div class="fld">Uzņēmuma nosaukums</div><div class="row"><div class="fld" style="flex:1">Reģ. Nr.</div><div class="fld" style="flex:1">PVN (VIES)</div></div><div class="fld">Kontaktpersona</div><div class="row"><div class="fld" style="flex:1">E-pasts</div><div class="fld" style="flex:1">Telefons</div></div><div class="row" style="align-items:center;gap:3px;margin:3px 0"><div style="width:7px;height:7px;border:1px solid #9A9A96;border-radius:1px"></div><span style="font-size:4.5px">Piekrītu noteikumiem</span></div><div class="btn acc">Izveidot kontu</div></div>`,
-  status:()=>headP()+`<div class="pad" style="text-align:center;padding-top:34px"><div style="width:26px;height:26px;border-radius:50%;background:#FFE0D0;margin:0 auto"></div><div class="t" style="font-size:7px;margin-top:10px">Pārbaudi e-pastu</div><div class="muted" style="font-size:5px">Nosūtījām verifikācijas saiti.</div><div class="btn acc" style="width:60%;margin:10px auto 0">Esmu apstiprinājis</div></div>`,
-  status2:()=>headP()+`<div class="pad" style="text-align:center;padding-top:34px"><div style="width:26px;height:26px;border-radius:50%;background:var(--wire);margin:0 auto"></div><div class="t" style="font-size:7px;margin-top:10px">Konts tiek izskatīts</div><div class="muted" style="font-size:5px">Manuāla pārbaude līdz 1 d.d.</div><div class="btn out" style="width:55%;margin:10px auto 0">Uz sākumu</div></div>`,
-  login:()=>headP()+`<div class="pad" style="padding-top:16px"><div class="t" style="font-size:7px">Ienākt</div><div class="lab" style="margin-top:4px">E-pasts</div><div class="fld">janis@piemers.lv</div><div class="lab">Parole</div><div class="fld">••••••••</div><div class="row" style="justify-content:space-between;font-size:4.5px;margin:2px 0"><span class="muted">☐ Atcerēties</span><span style="color:var(--accent)">Aizmirsi paroli?</span></div><div class="btn acc">Ienākt</div><div class="muted" style="font-size:5px;text-align:center;margin-top:5px">Nav konta? Reģistrēties</div></div>`,
-  forgot:()=>headP()+`<div class="pad" style="padding-top:20px"><div class="t" style="font-size:7px">Atjaunot paroli</div><div class="muted" style="font-size:5px">Nosūtīsim atjaunošanas saiti.</div><div class="lab" style="margin-top:6px">E-pasts</div><div class="fld">janis@piemers.lv</div><div class="btn acc" style="margin-top:3px">Nosūtīt saiti</div><div class="muted" style="font-size:5px;text-align:center;margin-top:5px">‹ Atpakaļ</div></div>`,
+  role:()=>C.topbarP()+`<div class="pad"><div class="h1">Reģistrācija</div><div class="muted" style="margin:4px 0 16px">Izvēlies konta veidu</div>${[['Privātpersona','Fiziska persona'],['Uzņēmums','Ar PVN numuru un VIES']].map(o=>`<div class="panel" style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="ico"></span><div class="col"><div style="font-weight:600;font-size:14px">${o[0]}</div><div class="muted" style="font-size:12px">${o[1]}</div></div></div>`).join('')}<div class="muted" style="font-size:12px;text-align:center;margin-top:8px">Jau ir konts? Ienākt</div></div>`,
+  form:()=>C.topbarP()+`<div class="pad"><div class="h2" style="margin-bottom:14px">Uzņēmuma konts</div>${C.field('Uzņēmuma nosaukums','','SIA „Piemērs”')}<div class="row"><div style="flex:1">${C.field('Reģ. Nr.','','40000…')}</div><div style="flex:1">${C.field('PVN Nr. (VIES)','','LV…')}</div></div>${C.field('Kontaktpersona','','Vārds Uzvārds')}<div class="row"><div style="flex:1">${C.field('E-pasts')}</div><div style="flex:1">${C.field('Telefons')}</div></div><div class="row" style="align-items:center;gap:8px;margin:6px 0 12px"><span class="check"></span><span style="font-size:12px">Piekrītu noteikumiem</span></div><div class="btn acc" style="width:100%;height:42px">Izveidot kontu</div></div>`,
+  status:()=>C.topbarP()+`<div class="pad center" style="padding-top:60px"><div style="width:54px;height:54px;border-radius:50%;background:#FFE0D0"></div><div class="h2" style="margin-top:18px">Pārbaudi e-pastu</div><div class="muted" style="font-size:13px;margin-top:4px">Nosūtījām verifikācijas saiti uz tavu e-pastu.</div><div class="btn acc" style="margin-top:18px;width:70%;height:40px">Esmu apstiprinājis</div></div>`,
+  status2:()=>C.topbarP()+`<div class="pad center" style="padding-top:60px"><div style="width:54px;height:54px;border-radius:50%;background:var(--wire)"></div><div class="h2" style="margin-top:18px">Konts tiek izskatīts</div><div class="muted" style="font-size:13px;margin-top:4px">Manuāla pārbaude, parasti līdz 1 darba dienai.</div><div class="btn out" style="margin-top:18px;width:60%;height:40px">Uz sākumu</div></div>`,
+  login:()=>C.topbarP()+`<div class="pad" style="padding-top:30px"><div class="h1">Ienākt</div>${C.field('E-pasts','janis@piemers.lv')}${C.field('Parole','••••••••')}<div class="between" style="font-size:12px;margin:2px 0 14px"><span class="muted">☐ Atcerēties mani</span><span style="color:var(--accent)">Aizmirsi paroli?</span></div><div class="btn acc" style="width:100%;height:42px">Ienākt</div><div class="muted" style="font-size:12px;text-align:center;margin-top:14px">Nav konta? Reģistrēties</div></div>`,
+  forgot:()=>C.topbarP()+`<div class="pad" style="padding-top:40px"><div class="h1">Atjaunot paroli</div><div class="muted" style="font-size:13px;margin:4px 0 16px">Ievadi e-pastu, un nosūtīsim atjaunošanas saiti.</div>${C.field('E-pasts','janis@piemers.lv')}<div class="btn acc" style="width:100%;height:42px;margin-top:6px">Nosūtīt saiti</div><div class="muted" style="font-size:12px;text-align:center;margin-top:14px">‹ Atpakaļ uz pieteikšanos</div></div>`,
 
-  pbasics:()=>headB()+`<div class="bdyb">${profSide(0)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:3px">Pamatdati</div><div class="row"><div style="flex:1"><div class="lab">Vārds</div><div class="fld v">Jānis</div></div><div style="flex:1"><div class="lab">Uzvārds</div><div class="fld v">Bērziņš</div></div></div><div class="lab">E-pasts</div><div class="fld v">janis@piemers.lv</div><div class="lab">Telefons</div><div class="fld v">+371 20000000</div><div class="row" style="justify-content:flex-end;margin-top:4px"><div class="btn acc" style="width:40%">Saglabāt</div></div></div></div>`,
-  bids:()=>headB()+`<div class="bdyb">${profSide(1)}<div class="main"><div class="tabs" style="margin-bottom:5px"><span class="tab act">Aktīvie (3)</span><span class="tab">Uzvarētie</span><span class="tab">Zaudētie</span></div>${[['Arion 650','72 000 €','o','Pārsolīts'],['T7.270','58 200 €','g','Augstākais'],['6155','19 500 €','o','Pārsolīts']].map(b=>`<div class="panel" style="display:flex;align-items:center;gap:5px;margin-bottom:4px">${PH(0).replace('height:0px','height:16px;width:24px')}<div class="col" style="flex:1"><span class="badge ${b[2]}">${b[3]}</span><div class="t" style="font-size:5px;margin-top:1px">${b[0]}</div><div class="muted" style="font-size:4.5px">Mans solījums: ${b[1]}</div></div></div>`).join('')}</div></div>`,
-  favs:()=>headB()+`<div class="bdyb">${profSide(2)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Favorīti</div><div class="g2">${PRODS.slice(0,4).map(p=>pcard(p[0],p[1],p[2])).join('')}</div></div></div>`,
-  docs:()=>headB()+`<div class="bdyb">${profSide(3)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Dokumenti</div>${[['Rēķins','CLAAS Arion 650'],['Pirkuma līgums','CLAAS Arion 650'],['Rēķins','Krone BiG Pack']].map(d=>`<div class="panel" style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><div class="ico" style="background:#EAE7E0"></div><div class="col" style="flex:1"><div class="t" style="font-size:5px">${d[0]}</div><div class="muted" style="font-size:4.5px">${d[1]}</div></div><span class="badge g">Nosūtīts</span><span style="font-size:7px">↓</span></div>`).join('')}</div></div>`,
-  gendocs:()=>headA()+`<div class="bdyb">${adminSide(3)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Dokumentu ģenerēšana</div>${[['CLAAS Arion 650','74 550 €','g'],['New Holland T7.270','61 110 €',''],['Krone BiG Pack','70 350 €','']].map(d=>`<div class="panel" style="display:flex;align-items:center;gap:5px;margin-bottom:4px"><div class="col" style="flex:1"><div class="t" style="font-size:5px">${d[0]}</div><div class="muted" style="font-size:4.5px">J. Bērziņš · ${d[1]}</div></div>${d[2]?'<span class="badge g">Nosūtīts</span>':'<div class="btn acc" style="width:44px">Ģenerēt</div>'}</div>`).join('')}</div></div>`,
-  nsettings:()=>headB()+`<div class="bdyb">${profSide(4)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Paziņojumi</div>${[['Esi pārsolīts',1],['Izsole beidzas',1],['Uzvara izsolē',1],['Jaunumi',0]].map(t=>`<div class="row" style="justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--wire2)"><span style="font-size:5px">${t[0]}</span><div class="toggle ${t[1]?'':'off'}"></div></div>`).join('')}</div></div>`,
-  security:()=>headB()+`<div class="bdyb">${profSide(5)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:3px">Drošība</div><div class="lab">Pašreizējā parole</div><div class="fld">••••••••</div><div class="lab">Jaunā parole</div><div class="fld"></div><div class="lab">Atkārto paroli</div><div class="fld"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><div class="btn acc" style="width:44%">Mainīt paroli</div></div></div></div>`,
-  notif:()=>headP()+`<div class="pad"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:5px"><div class="t" style="font-size:6.5px">Paziņojumi</div><div style="position:relative"><div class="glob" style="border-radius:1px;width:8px;height:8px"></div><div style="position:absolute;top:-2px;right:-2px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></div></div></div>${[['Esi pārsolīts','CLAAS Arion 650 · pirms 2 min'],['Izsole drīz beidzas','New Holland T7.270 · 1 h'],['Tu uzvarēji!','Krone BiG Pack']].map(n=>`<div class="panel" style="display:flex;gap:5px;margin-bottom:4px"><div style="width:10px;height:10px;border-radius:50%;background:#FFE0D0;flex:none"></div><div class="col"><div class="t" style="font-size:5px">${n[0]}</div><div class="muted" style="font-size:4.5px">${n[1]}</div></div></div>`).join('')}</div>`,
+  pbasics:()=>C.chrome()+C.topbar()+`<div class="body">${C.sidebar(PROFNAV,0,C.profHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Pamatdati</div><div class="row"><div style="flex:1">${C.field('Vārds','Jānis')}</div><div style="flex:1">${C.field('Uzvārds','Bērziņš')}</div></div>${C.field('E-pasts','janis@piemers.lv')}${C.field('Telefons','+371 20000000')}<div class="row" style="justify-content:flex-end;margin-top:6px">${C.btn('Saglabāt','acc')}</div></div></div>`,
+  bids:()=>C.chrome()+C.topbar()+`<div class="body">${C.sidebar(PROFNAV,1,C.profHead())}<div class="main">${C.tabs(['Aktīvie (3)','Uzvarētie (2)','Zaudētie (1)'],0)}${[['Arion 650','72 000 €','o','Pārsolīts'],['T7.270','58 200 €','g','Augstākais solītājs'],['6155','19 500 €','o','Pārsolīts']].map(b=>`<div class="lrow">${C.photo(0).replace('height:0px','height:44px;width:64px')}<div class="col" style="flex:1"><span class="bdg ${b[2]}" style="align-self:flex-start">${b[3]}</span><div style="font-weight:600;font-size:13px;margin-top:3px">${b[0]}</div><div class="muted" style="font-size:12px">Mans solījums: ${b[1]}</div></div></div>`).join('')}</div></div>`,
+  favs:()=>C.chrome()+C.topbar()+`<div class="body">${C.sidebar(PROFNAV,2,C.profHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Favorīti</div>${C.grid(4,2)}</div></div>`,
+  docs:()=>C.chrome()+C.topbar()+`<div class="body">${C.sidebar(PROFNAV,3,C.profHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Dokumenti</div>${[['Rēķins','CLAAS Arion 650 · INV-0042'],['Pirkuma līgums','CLAAS Arion 650'],['Rēķins','Krone BiG Pack · INV-0031']].map(d=>`<div class="lrow"><span class="ico" style="background:#EAE7E0"></span><div class="col" style="flex:1"><div style="font-weight:600;font-size:13px">${d[0]}</div><div class="muted" style="font-size:12px">${d[1]}</div></div><span class="bdg g">Nosūtīts</span><span style="font-size:16px;color:var(--muted)">↓</span></div>`).join('')}</div></div>`,
+  gendocs:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(ADMNAV,3,C.adminHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Dokumentu ģenerēšana</div>${[['CLAAS Arion 650','74 550 €',1],['New Holland T7.270','61 110 €',0],['Krone BiG Pack','70 350 €',0]].map(d=>`<div class="lrow"><div class="col" style="flex:1"><div style="font-weight:600;font-size:13px">${d[0]}</div><div class="muted" style="font-size:12px">J. Bērziņš · ${d[1]} (ar prēmiju)</div></div>${d[2]?'<span class="bdg g">Nosūtīts</span>':C.btn('Ģenerēt un sūtīt','acc','font-size:12px')}</div>`).join('')}</div></div>`,
+  nsettings:()=>C.chrome()+C.topbar()+`<div class="body">${C.sidebar(PROFNAV,4,C.profHead())}<div class="main"><div class="h2" style="margin-bottom:6px">E-pasta paziņojumi</div>${[['Esi pārsolīts',1],['Izsole drīz beidzas',1],['Uzvara izsolē',1],['Jaunumi',0]].map(t=>`<div class="between" style="padding:11px 0;border-bottom:1px solid #ECEAE4"><span style="font-size:13px">${t[0]}</span><span class="toggle ${t[1]?'':'off'}"></span></div>`).join('')}</div></div>`,
+  security:()=>C.chrome()+C.topbar()+`<div class="body">${C.sidebar(PROFNAV,5,C.profHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Drošība</div>${C.field('Pašreizējā parole','••••••••')}${C.field('Jaunā parole')}${C.field('Atkārto jauno paroli')}<div class="row" style="justify-content:flex-end;margin-top:6px">${C.btn('Mainīt paroli','acc')}</div></div></div>`,
+  notif:()=>C.topbarP()+`<div class="pad"><div class="between" style="margin-bottom:14px"><div class="h2">Paziņojumi</div><div style="position:relative"><span class="globe2" style="border-radius:3px"></span><span style="position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent)"></span></div></div>${[['Esi pārsolīts','CLAAS Arion 650 · pirms 2 min'],['Izsole drīz beidzas','New Holland T7.270 · pēc 1 h'],['Tu uzvarēji!','Krone BiG Pack']].map(n=>`<div class="lrow"><span style="width:22px;height:22px;border-radius:50%;background:#FFE0D0;flex:none"></span><div class="col"><div style="font-weight:600;font-size:13px">${n[0]}</div><div class="muted" style="font-size:12px">${n[1]}</div></div></div>`).join('')}</div>`,
 
-  dashboard:()=>headA()+`<div class="bdyb">${adminSide(0)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Pārskats</div><div class="g2">${[['8','Aktīvās izsoles'],['143','Solījumi (7d)'],['5','Gaida apstipr.'],['284 500 €','Apgrozījums']].map(s=>`<div class="stat"><div class="big" style="font-size:9px">${s[0]}</div><div class="muted" style="font-size:4.5px">${s[1]}</div></div>`).join('')}</div><div class="lab" style="margin-top:5px">Drīzāk beidzas</div><div class="panel" style="margin-top:2px"><div class="row" style="justify-content:space-between"><span style="font-size:5px">CLAAS Arion 650</span><span class="badge o">Bez rez.</span></div></div></div></div>`,
-  alots:()=>headA()+`<div class="bdyb">${adminSide(1)}<div class="main"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px"><div class="t" style="font-size:7px">Loti</div><div class="btn acc" style="width:38px">+ Jauns</div></div><table>${[['CLAAS Arion 650','71 000 €','Aktīvs'],['New Holland T7.270','58 200 €','Aktīvs'],['Deutz-Fahr 6155','19 500 €','Bez rez.'],['Fendt 724','54 000 €','Melnrakts']].map(r=>`<tr><td class="b">${r[0]}</td><td>${r[1]}</td><td><span class="badge n">${r[2]}</span></td></tr>`).join('')}</table></div></div>`,
-  wizard:()=>headA()+`<div class="bdyb">${adminSide(1)}<div class="main"><div class="row" style="gap:4px;align-items:center;margin-bottom:5px;font-size:4.5px">${['Pamati','Apraksts','Foto','Param.','Priekšsk.'].map((s,i)=>`<span class="badge ${i===0?'o':'n'}">${i+1} ${s}</span>`).join('')}</div><div class="row"><div style="flex:1"><div class="lab">Marka</div><div class="fld v">John Deere</div></div><div style="flex:1"><div class="lab">Modelis</div><div class="fld v">6155M</div></div></div><div class="row">${[['Gads','2019'],['Mst.','2 480'],['Stāv.','Labs']].map(s=>`<div style="flex:1"><div class="lab">${s[0]}</div><div class="fld v">${s[1]}</div></div>`).join('')}</div><div class="row" style="justify-content:space-between;margin-top:5px"><div class="btn out" style="width:30%">Atcelt</div><div class="btn acc" style="width:30%">Tālāk</div></div></div></div>`,
-  ausers:()=>headA()+`<div class="bdyb">${adminSide(2)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Lietotāji</div><table>${[['SIA „Lauks LV”','Uzņēmums','Gaida'],['Tomas Kazlauskas','Privātp.','Gaida'],['OÜ Põllumees','Uzņēmums','Aktīvs'],['Anna Ozola','Privātp.','Aktīvs']].map(r=>`<tr><td class="b">${r[0]}</td><td class="muted">${r[1]}</td><td><span class="badge ${r[2]==='Gaida'?'o':'g'}">${r[2]}</span></td></tr>`).join('')}</table></div></div>`,
-  approve:()=>headB()+`<div class="pad"><div class="t" style="font-size:6.5px;margin-bottom:4px">Lietotāju apstiprināšana</div>${[['SIA „Lauks LV”','Uzņēmums','VIES OK','g'],['Tomas Kazlauskas','Privātpersona','',''],['OÜ Põllumees','Uzņēmums','VIES nederīgs','r']].map(u=>`<div class="panel" style="margin-bottom:4px"><div class="row" style="align-items:center"><div class="col" style="flex:1"><div class="t" style="font-size:5px">${u[0]}</div><div class="row" style="gap:3px;margin-top:1px"><span class="badge n">${u[1]}</span>${u[2]?`<span class="badge ${u[3]==='g'?'g':'o'}">${u[2]}</span>`:''}</div></div><div class="row" style="gap:3px"><div class="btn out" style="width:18px">Dok.</div><div class="btn out" style="width:16px">✕</div><div class="btn acc" style="width:18px">✓</div></div></div></div>`).join('')}</div>`,
-  acats:()=>headB()+`<div class="pad"><div class="t" style="font-size:6.5px;margin-bottom:4px">Kategorijas</div>${['Traktori','Piederumi','Kombaini','Piekabes'].map(c=>`<div class="panel" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;padding:4px 5px"><span style="font-size:5px;font-weight:500">${c}</span><span class="muted" style="font-size:4.5px">Rediģēt</span></div>`).join('')}<div class="btn out" style="width:50%;margin-top:3px">+ Pievienot</div></div>`,
-  content:()=>headB()+`<div class="bdyb"><div class="side"><div class="si act">Noteikumi</div><div class="si">Privātums</div><div class="si">Sīkdatnes</div><div class="si">FAQ</div></div><div class="main"><div class="t" style="font-size:6.5px;margin-bottom:3px">Lietošanas noteikumi</div><div class="panel" style="height:60px;overflow:hidden"><div class="muted" style="font-size:5px;line-height:1.5">1. Visi solījumi ir saistoši. 2. Cenas norādītas neto. 3. Pircēja prēmija 5%. 4. Norēķins ar bankas pārskaitījumu…</div></div><div class="row" style="justify-content:flex-end;margin-top:4px"><div class="btn acc" style="width:34%">Publicēt</div></div></div></div>`,
-  abids:()=>headA()+`<div class="bdyb">${adminSide(3)}<div class="main"><div class="t" style="font-size:7px;margin-bottom:4px">Solījumu pārraudzība</div><table>${[['Arion 650','J.B.','72 000 €','14:32'],['Arion 650','K.T.','71 000 €','14:30'],['T7.270','M.B.','58 200 €','12:10'],['6155','A.L.','19 500 €','11:45']].map(r=>`<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="b">${r[2]}</td><td class="muted">${r[3]}</td></tr>`).join('')}</table></div></div>`,
+  dashboard:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(ADMNAV,0,C.adminHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Pārskats</div><div class="grid g2">${[['8','Aktīvās izsoles'],['143','Solījumi (7d)'],['5','Gaida apstipr.'],['284 500 €','Apgrozījums']].map(s=>`<div class="stat"><div class="v">${s[0]}</div><div class="muted" style="font-size:12px">${s[1]}</div></div>`).join('')}</div><div class="lab" style="margin-top:14px;margin-bottom:6px">Drīzāk beidzas</div><div class="panel between" style="padding:11px"><span style="font-size:13px">CLAAS Arion 650</span><span class="bdg o">Bez rezerves</span></div></div></div>`,
+  alots:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(ADMNAV,1,C.adminHead())}<div class="main"><div class="between" style="margin-bottom:12px"><div class="h2">Loti</div>${C.btn('+ Jauns lots','acc','font-size:12px')}</div>${C.table(['Lots','Cena','Statuss'],[['CLAAS Arion 650','71 000 €','<span class="bdg n">Aktīvs</span>'],['New Holland T7.270','58 200 €','<span class="bdg n">Aktīvs</span>'],['Deutz-Fahr 6155','19 500 €','<span class="bdg o">Bez rez.</span>'],['Fendt 724 Vario','54 000 €','<span class="bdg n">Melnraksts</span>']])}</div></div>`,
+  wizard:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(ADMNAV,1,C.adminHead())}<div class="main"><div class="row" style="gap:10px;margin-bottom:16px;align-items:center">${['Pamati','Apraksts','Foto','Param.','Priekšsk.'].map((s,i)=>`<div class="step"><span class="stepn ${i===0?'on':''}">${i+1}</span><span style="font-size:11px;color:${i===0?'var(--ink)':'var(--muted)'}">${s}</span></div>`).join('')}</div><div class="row"><div style="flex:1">${C.field('Marka','John Deere')}</div><div style="flex:1">${C.field('Modelis','6155M')}</div></div><div class="row"><div style="flex:1">${C.field('Gads','2019')}</div><div style="flex:1">${C.field('Motorstundas','2 480')}</div><div style="flex:1">${C.field('Stāvoklis','Labs ⌄')}</div></div><div class="between" style="margin-top:10px">${C.btn('Atcelt','out')}${C.btn('Tālāk','acc')}</div></div></div>`,
+  ausers:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(ADMNAV,2,C.adminHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Lietotāji</div>${C.table(['Vārds','Tips','Statuss'],[['SIA „Lauks LV”','Uzņēmums','<span class="bdg o">Gaida</span>'],['Tomas Kazlauskas','Privātp.','<span class="bdg o">Gaida</span>'],['OÜ Põllumees','Uzņēmums','<span class="bdg g">Aktīvs</span>'],['Anna Ozola','Privātp.','<span class="bdg g">Aktīvs</span>']])}</div></div>`,
+  approve:()=>C.chrome()+C.topbar()+`<div class="main"><div class="h2" style="margin-bottom:12px">Lietotāju apstiprināšana</div>${[['SIA „Lauks LV”','Uzņēmums','VIES OK','g'],['Tomas Kazlauskas','Privātpersona','',''],['OÜ Põllumees','Uzņēmums','VIES nederīgs','r']].map(u=>`<div class="panel" style="margin-bottom:10px;padding:11px"><div class="between"><div class="col"><div style="font-weight:600;font-size:13px">${u[0]}</div><div class="row" style="gap:5px;margin-top:4px"><span class="bdg n">${u[1]}</span>${u[2]?`<span class="bdg ${u[3]==='g'?'g':'r'}">${u[2]}</span>`:''}</div></div><div class="row" style="gap:5px">${C.btn('Dok.','out','font-size:11px;padding:5px 8px')}${C.btn('✕','out','font-size:11px;padding:5px 8px')}${C.btn('✓','acc','font-size:11px;padding:5px 9px')}</div></div></div>`).join('')}</div>`,
+  acats:()=>C.chrome()+C.topbar()+`<div class="main" style="max-width:60%"><div class="h2" style="margin-bottom:12px">Kategorijas</div>${['Traktori','Piederumi','Kombaini','Piekabes'].map(c=>`<div class="panel between" style="padding:11px;margin-bottom:8px"><span style="font-weight:500;font-size:13px">${c}</span><span class="muted" style="font-size:12px">Rediģēt</span></div>`).join('')}<div class="btn out" style="margin-top:6px">+ Pievienot kategoriju</div></div>`,
+  content:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(['Noteikumi','Privātums','Sīkdatnes','FAQ'],0)}<div class="main"><div class="h2" style="margin-bottom:12px">Lietošanas noteikumi</div><div class="panel" style="height:120px;overflow:hidden"><div class="muted" style="font-size:12px;line-height:1.6">1. Visi solījumi ir saistoši. 2. Cenas norādītas neto. 3. Pircēja prēmija 5%. 4. Norēķins ar bankas pārskaitījumu pēc izsoles…</div></div><div class="row" style="justify-content:flex-end;margin-top:10px">${C.btn('Publicēt','acc')}</div></div></div>`,
+  abids:()=>C.chrome('balticbid.lv/admin')+`<div class="body">${C.sidebar(ADMNAV,3,C.adminHead())}<div class="main"><div class="h2" style="margin-bottom:12px">Solījumu pārraudzība</div>${C.table(['Lots','Lietotājs','Summa','Laiks'],[['Arion 650','J.B.','72 000 €','14:32'],['Arion 650','K.T.','71 000 €','14:30'],['T7.270','M.B.','58 200 €','12:10'],['6155','A.L.','19 500 €','11:45']])}</div></div>`,
 
-  email:()=>headP()+`<div style="background:#F2F1EE;padding:10px;height:265px"><div style="background:#fff;border:1px solid var(--line);border-radius:3px;overflow:hidden"><div style="height:22px;background:#1A1A1A;display:flex;align-items:center;justify-content:center;gap:3px"><div class="lgm"></div><span style="color:#fff;font-size:6px;font-weight:600">BalticBid</span></div><div class="pad"><div class="t" style="font-size:6.5px">Esi pārsolīts</div><div class="muted" style="font-size:5px;margin:2px 0 4px">Kāds pārsolīja tavu solījumu izsolē CLAAS Arion 650.</div><div class="panel" style="display:flex;gap:5px;background:#FAFAF8">${PH(0).replace('height:0px','height:24px;width:30%')}<div class="col"><div class="t" style="font-size:5px">CLAAS Arion 650</div><div class="muted" style="font-size:4.5px">Pašreizējā: 72 000 €</div><div class="muted" style="font-size:4.5px">Beidzas: 01.06 14:00</div></div></div><div class="btn acc" style="margin-top:5px">Solīt vēlreiz</div></div><div style="height:16px;background:#F6F5F2;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center"><span class="muted" style="font-size:4px">Atteikties no paziņojumiem · Noteikumi</span></div></div></div>`,
-  errors:()=>headB()+`<div class="pad" style="text-align:center;padding-top:24px"><div class="big" style="font-size:26px">404</div><div class="t" style="font-size:7px;margin-top:6px">Lapa nav atrasta</div><div class="muted" style="font-size:5px">Iespējams, adrese mainīta vai dzēsta.</div><div class="btn acc" style="width:44%;margin:10px auto 0">Uz sākumu</div></div>`,
-  cookies:()=>headB()+`<div style="position:relative;height:130px">${grid(3).replace(/26px/g,'18px')}<div style="position:absolute;left:6px;right:6px;bottom:6px;background:#fff;border:1px solid var(--line);border-radius:3px;padding:5px;box-shadow:0 4px 12px -6px rgba(0,0,0,.2)"><div style="font-size:5px;margin-bottom:4px">Mēs izmantojam sīkdatnes pieredzes uzlabošanai.</div><div class="row"><div class="btn out" style="flex:1">Pielāgot</div><div class="btn acc" style="flex:1">Pieņemt visas</div></div></div></div>`,
-  static:()=>headB()+`<div class="pad"><div class="t" style="font-size:8px;margin-bottom:5px">Kā tas strādā</div><div class="g3" style="margin-bottom:5px">${[['1','Atrodi'],['2','Solī'],['3','Uzvari']].map(s=>`<div class="panel" style="text-align:center"><div style="width:11px;height:11px;border-radius:2px;background:#FFE0D0;margin:0 auto 3px"></div><div class="t" style="font-size:5px">${s[1]}</div></div>`).join('')}</div><div class="lab">FAQ</div><div class="panel" style="margin-top:2px;display:flex;justify-content:space-between"><span style="font-size:5px">Vai solījumi ir saistoši?</span><span class="muted">⌄</span></div></div>`,
+  email:()=>C.topbarP()+`<div style="flex:1;background:#F2F1EE;padding:14px"><div style="background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden"><div style="height:40px;background:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px"><span class="bmk"></span><span style="color:#fff;font-weight:600;font-size:14px">BalticBid</span></div><div class="pad"><div class="h2">Esi pārsolīts</div><div class="muted" style="font-size:12px;margin:5px 0 12px">Kāds pārsolīja tavu solījumu izsolē CLAAS Arion 650.</div><div class="panel" style="display:flex;gap:10px;background:#FBFAF8;padding:10px">${C.photo(0).replace('height:0px','height:48px;width:64px')}<div class="col"><div style="font-weight:600;font-size:13px">CLAAS Arion 650</div><div class="muted" style="font-size:12px">Pašreizējā: 72 000 €</div><div class="muted" style="font-size:12px">Beidzas: 01.06 14:00</div></div></div><div class="btn acc" style="width:100%;margin-top:12px;height:40px">Solīt vēlreiz</div></div><div style="height:30px;background:#F1EFEA;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center"><span class="muted" style="font-size:10px">Atteikties no paziņojumiem · Noteikumi</span></div></div></div>`,
+  errors:()=>C.chrome()+C.topbar()+`<div class="main center" style="padding-top:50px"><div style="font-size:56px;font-weight:600;letter-spacing:-.04em">404</div><div class="h2" style="margin-top:10px">Lapa nav atrasta</div><div class="muted" style="font-size:13px;margin-top:4px">Iespējams, adrese ir mainīta vai lapa dzēsta.</div><div class="btn acc" style="margin-top:18px;width:44%;height:40px">Uz sākumu</div></div>`,
+  cookies:()=>C.chrome()+C.topbar()+`<div style="flex:1;position:relative"><div class="pad">${C.grid(3)}</div><div style="position:absolute;left:14px;right:14px;bottom:14px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:13px"><div style="font-size:12px;margin-bottom:9px">Mēs izmantojam sīkdatnes pieredzes uzlabošanai.</div><div class="row">${C.btn('Pielāgot','out','flex:1')}${C.btn('Pieņemt visas','acc','flex:1')}</div></div></div>`,
+  static:()=>C.chrome()+C.topbar()+`<div class="main"><div class="h1" style="margin-bottom:14px">Kā tas strādā</div><div class="grid g3" style="margin-bottom:16px">${[['1','Atrodi'],['2','Solī'],['3','Uzvari']].map(s=>`<div class="panel center" style="padding:12px"><span class="ico"></span><div style="font-weight:600;font-size:13px;margin-top:8px">${s[1]}</div></div>`).join('')}</div><div class="lab" style="margin-bottom:6px">FAQ</div><div class="panel between" style="padding:11px"><span style="font-size:13px">Vai solījumi ir saistoši?</span><span class="muted">⌄</span></div></div>`,
 };
 
-const SIZE={phone:{w:178,h:300},browser:{w:260,h:188},desk:{w:280,h:190}};
+const NATIVE={browser:{w:760,h:470},desk:{w:820,h:512},phone:{w:330,h:560}};
+const SCRW={browser:268,desk:288,phone:170};
+function dims(dev){const k=SCRW[dev]/NATIVE[dev].w;return{k,w:SCRW[dev],h:Math.round(NATIVE[dev].h*k)};}
+const SIZE={};['browser','desk','phone'].forEach(d=>{const f=dims(d);SIZE[d]=(d==='phone')?{w:f.w+12,h:f.h+12}:{w:f.w,h:f.h};});
 
 const NODES=[
-  {id:'role',n:1,x:60,y:110,dev:'phone',kind:'role',title:'Reģistrācija',sub:'Konta veids',role:'public',notes:{purpose:'Pirmais reģistrācijas solis — lietotājs izvēlas, vai reģistrēties kā privātpersona vai uzņēmums. No izvēles atkarīgi turpmākie lauki.',elements:['Divas izvēles kartiņas: Privātpersona / Uzņēmums','Īss apraksts katrai','Saite uz pieteikšanos'],states:['Noklusējums','Hover/fokuss']}},
-  {id:'form',n:2,x:290,y:110,dev:'phone',kind:'form',title:'Reģistrācijas forma',sub:'B2C / B2B',role:'public',notes:{purpose:'Pielāgota forma atkarībā no konta veida. Uzņēmumam — reģ. nr. un PVN ar VIES pārbaudi; privātpersonai — vārds, uzvārds, adrese, telefons.',elements:['B2C: vārds, uzvārds, telefons, adrese, valsts','B2B: uzņēmums, reģ. nr., PVN (VIES), kontaktpersona','Valstu saraksts (arī ārpus ES)','Piekrišana noteikumiem (obligāta)'],states:['Validācijas kļūdas','VIES: derīgs / nederīgs / nav ES','Iesniegšana → verifikācija'],emails:['E-pasta verifikācijas saite']}},
-  {id:'verify',n:3,x:520,y:110,dev:'phone',kind:'status',title:'E-pasta verifikācija',sub:'Apstiprini saiti',role:'public',notes:{purpose:'Lietotājs apstiprina e-pasta adresi, noklikšķinot saiti vēstulē.',elements:['Paskaidrojums','Poga „Nosūtīt vēlreiz”','Statusa ikona'],states:['Gaida apstiprinājumu','Saite derīga / beigusies'],emails:['E-pasta verifikācija']}},
-  {id:'pending',n:4,x:750,y:110,dev:'phone',kind:'status2',title:'Konts izskatīšanā',sub:'Manuāla pārbaude',role:'public',notes:{purpose:'Pēc e-pasta verifikācijas konts gaida manuālu admina apstiprināšanu (KYC).',elements:['Statusa paskaidrojums','~1 darba diena','Poga uz sākumu'],states:['Gaida','Apstiprināts','Noraidīts / vajag dokumentus'],emails:['Konts apstiprināts','Konts noraidīts / papildu dokumenti']}},
-  {id:'login',n:5,x:980,y:110,dev:'phone',kind:'login',title:'Pieteikšanās',sub:'Ienākšana',role:'public',notes:{purpose:'Esoša lietotāja ienākšana. Solīšana pieejama tikai pēc ielogošanās un apstiprināšanas.',elements:['E-pasts, parole','Atcerēties mani','Saites uz paroli / reģistrāciju'],states:['Nepareizi dati','Konts nav apstiprināts','Konts bloķēts']}},
-  {id:'forgot',n:6,x:1210,y:110,dev:'phone',kind:'forgot',title:'Paroles atjaunošana',sub:'Pieprasījums + jauna',role:'public',notes:{purpose:'Paroles atjaunošanas saites pieprasījums un jaunas paroles iestatīšana.',elements:['E-pasta lauks','Apstiprinājums','Jaunās paroles forma'],states:['Saite nosūtīta','Saite derīga / beigusies'],emails:['Paroles atjaunošana','Parole nomainīta']}},
+  {id:'role',n:1,x:60,y:110,dev:'phone',kind:'role',title:'Reģistrācija',sub:'Konta veids',role:'public',notes:{purpose:'Pirmais reģistrācijas solis — lietotājs izvēlas privātpersonas vai uzņēmuma kontu. No izvēles atkarīgi turpmākie lauki.',elements:['Divas izvēles kartiņas','Apraksts katrai','Saite uz pieteikšanos'],states:['Noklusējums','Hover/fokuss']}},
+  {id:'form',n:2,x:290,y:110,dev:'phone',kind:'form',title:'Reģistrācijas forma',sub:'B2C / B2B',role:'public',notes:{purpose:'Pielāgota forma. Uzņēmumam — reģ. nr. un PVN ar VIES; privātpersonai — vārds, adrese, telefons.',elements:['B2C lauki','B2B lauki + VIES','Valstis (arī ārpus ES)','Piekrišana noteikumiem'],states:['Validācija','VIES derīgs/nederīgs','→ verifikācija'],emails:['E-pasta verifikācija']}},
+  {id:'verify',n:3,x:520,y:110,dev:'phone',kind:'status',title:'E-pasta verifikācija',sub:'Apstiprini saiti',role:'public',notes:{purpose:'Lietotājs apstiprina e-pastu, klikšķinot saiti.',elements:['Paskaidrojums','Sūtīt vēlreiz'],states:['Gaida','Saite derīga/beigusies'],emails:['E-pasta verifikācija']}},
+  {id:'pending',n:4,x:750,y:110,dev:'phone',kind:'status2',title:'Konts izskatīšanā',sub:'Manuāla pārbaude',role:'public',notes:{purpose:'Konts gaida manuālu admina apstiprināšanu (KYC).',elements:['Statuss','~1 d.d.'],states:['Gaida','Apstiprināts','Noraidīts'],emails:['Konts apstiprināts','Noraidīts / dokumenti']}},
+  {id:'login',n:5,x:980,y:110,dev:'phone',kind:'login',title:'Pieteikšanās',sub:'Ienākšana',role:'public',notes:{purpose:'Ienākšana. Solīšana tikai pēc apstiprināšanas.',elements:['E-pasts, parole','Atcerēties','Saites'],states:['Nepareizi dati','Nav apstiprināts','Bloķēts']}},
+  {id:'forgot',n:6,x:1210,y:110,dev:'phone',kind:'forgot',title:'Paroles atjaunošana',sub:'Pieprasījums + jauna',role:'public',notes:{purpose:'Paroles atjaunošana.',elements:['E-pasts','Jaunās paroles forma'],states:['Saite nosūtīta','Beigusies'],emails:['Paroles atjaunošana','Parole nomainīta']}},
 
-  {id:'catalog',n:7,x:60,y:630,dev:'browser',kind:'catalog',title:'Katalogs',sub:'Filtri + kārtošana',role:'public',notes:{purpose:'Galvenā ieejas lapa. Aktīvo izsoļu saraksts ar reāliem filtriem un kārtošanu kreisajā panelī.',elements:['Filtri: marka, valsts, stāvoklis, gads, cena','Kārtošana (4 opcijas) filtru panelī','Lotu režģis ar foto, cenu, taimeri','Favorīta poga (ielogotiem)'],states:['Ielāde','Tukšs rezultāts','Mobilais filtru drawer']}},
-  {id:'search',n:8,x:360,y:630,dev:'browser',kind:'search',title:'Meklēšanas rezultāti',sub:'',role:'public',notes:{purpose:'Rezultāti pēc teksta meklēšanas.',elements:['Meklēšanas lauks','Rezultātu režģis','Filtru pielietošana'],states:['Ir rezultāti','Nav rezultātu']}},
-  {id:'category',n:9,x:660,y:630,dev:'browser',kind:'category',title:'Kategorija',sub:'Apakškategorijas',role:'public',notes:{purpose:'Konkrētas kategorijas skats ar apakšfiltriem.',elements:['Kategorijas virsraksts','Apakškategoriju čipi','Lotu režģis'],states:['Ir loti','Tukša kategorija']}},
-  {id:'detail',n:10,x:960,y:630,dev:'browser',kind:'detail',title:'Lota lapa',sub:'Solīšana + taimeris',role:'public',notes:{purpose:'Galvenais konversijas ekrāns. Galerija, specifikācijas un solīšanas panelis ar dzīvu taimeri.',elements:['Foto galerija + miniatūras','Specifikācijas: gads, motorstundas, stāvoklis, vieta','Solīšanas panelis: cena, solis, taimeris','Pircēja prēmijas sadalījums','Saite uz vēsturi un Q&A'],states:['Neielogojies → login','Var solīt','Augstākais solītājs','Pārsolīts','Rezerve nav sasniegta','Izsole beigusies'],emails:['Solījums veikts','Esi pārsolīts']}},
-  {id:'modal',n:11,x:1260,y:630,dev:'phone',kind:'modal',title:'Solījuma apstiprināšana',sub:'Modāls',role:'public',notes:{purpose:'Apstiprinājuma modāls pirms solījuma — izmaksu sadalījums un saistoša solījuma piekrišana.',elements:['Summa + prēmija + kopā','Checkbox „saistošs”','Atcelt / Apstiprināt'],states:['Apstiprināt neaktīvs bez piekrišanas','Anti-sniping +2 min']}},
-  {id:'history',n:12,x:1560,y:630,dev:'phone',kind:'history',title:'Solījumu vēsture',sub:'Modāls',role:'public',notes:{purpose:'Visu lota solījumu saraksts.',elements:['Tabula: solītājs, summa, laiks','Ritināms'],states:['Reāllaika atjauninājums']}},
-  {id:'qa',n:13,x:1860,y:630,dev:'browser',kind:'qa',title:'Jautājumi par lotu',sub:'Q&A',role:'public',notes:{purpose:'Publiski jautājumi un BalticBid atbildes par lotu.',elements:['Jautājumu saraksts','Atbildes','Ievades lauks'],states:['Nav jautājumu','Gaida atbildi']}},
-  {id:'win',n:14,x:2160,y:630,dev:'browser',kind:'win',title:'Izsoles beigas',sub:'Uzvara / zaudējums',role:'public',notes:{purpose:'Izsoles noslēguma stāvokļi.',elements:['Uzvaras paziņojums','Norēķina instrukcija','Saite uz dokumentiem'],states:['Uzvarēts','Zaudēts','Rezerve nav sasniegta','Nav solījumu'],emails:['Tu uzvarēji','Tu zaudēji','Rezerve nav sasniegta']}},
+  {id:'catalog',n:7,x:60,y:630,dev:'browser',kind:'catalog',title:'Katalogs',sub:'Filtri + kārtošana',role:'public',notes:{purpose:'Galvenā ieejas lapa ar reāliem filtriem un kārtošanu.',elements:['Filtri: marka, valsts, stāvoklis, gads, cena','Kārtošana (4 opcijas)','Lotu režģis','Favorīts (ielogotiem)'],states:['Ielāde','Tukšs','Mobilais drawer']}},
+  {id:'search',n:8,x:360,y:630,dev:'browser',kind:'search',title:'Meklēšanas rezultāti',sub:'',role:'public',notes:{purpose:'Teksta meklēšanas rezultāti.',elements:['Meklēšana','Režģis'],states:['Ir rezultāti','Nav rezultātu']}},
+  {id:'category',n:9,x:660,y:630,dev:'browser',kind:'category',title:'Kategorija',sub:'Apakškategorijas',role:'public',notes:{purpose:'Kategorijas skats ar apakšfiltriem.',elements:['Virsraksts','Čipi','Režģis'],states:['Ir loti','Tukša']}},
+  {id:'detail',n:10,x:960,y:630,dev:'browser',kind:'detail',title:'Lota lapa',sub:'Solīšana + taimeris',role:'public',notes:{purpose:'Galvenais konversijas ekrāns ar galeriju, specifikācijām un solīšanas paneli.',elements:['Galerija + miniatūras','Specifikācijas','Solīšanas panelis','Prēmijas sadalījums','Vēsture, Q&A'],states:['Neielogojies → login','Var solīt','Augstākais','Pārsolīts','Rezerve nav sasniegta','Beigusies'],emails:['Solījums veikts','Esi pārsolīts']}},
+  {id:'modal',n:11,x:1260,y:630,dev:'phone',kind:'modal',title:'Solījuma apstiprināšana',sub:'Modāls',role:'public',notes:{purpose:'Apstiprinājuma modāls — izmaksu sadalījums un saistoša solījuma piekrišana.',elements:['Summa + prēmija + kopā','Checkbox „saistošs”','Atcelt / Apstiprināt'],states:['Neaktīvs bez piekrišanas','Anti-sniping +2 min']}},
+  {id:'history',n:12,x:1560,y:630,dev:'phone',kind:'history',title:'Solījumu vēsture',sub:'Modāls',role:'public',notes:{purpose:'Visu lota solījumu saraksts.',elements:['Tabula: solītājs, summa, laiks'],states:['Reāllaika atjauninājums']}},
+  {id:'qa',n:13,x:1860,y:630,dev:'browser',kind:'qa',title:'Jautājumi par lotu',sub:'Q&A',role:'public',notes:{purpose:'Publiski jautājumi un atbildes.',elements:['Jautājumi','Atbildes','Ievades lauks'],states:['Nav jautājumu','Gaida atbildi']}},
+  {id:'win',n:14,x:2160,y:630,dev:'browser',kind:'win',title:'Izsoles beigas',sub:'Uzvara / zaudējums',role:'public',notes:{purpose:'Izsoles noslēguma stāvokļi.',elements:['Uzvaras paziņojums','Norēķina instrukcija','Dokumenti'],states:['Uzvarēts','Zaudēts','Rezerve nav sasniegta','Nav solījumu'],emails:['Tu uzvarēji','Tu zaudēji','Rezerve nav sasniegta']}},
 
-  {id:'pbasics',n:15,x:60,y:1160,dev:'browser',kind:'pbasics',title:'Profils — pamatdati',sub:'',role:'user',notes:{purpose:'Lietotāja pamatdatu skats un rediģēšana.',elements:['Vārds, e-pasts, telefons, adrese','Saglabāt'],states:['Skatīšana','Rediģēšana','Saglabāts']}},
-  {id:'bids',n:16,x:360,y:1160,dev:'browser',kind:'bids',title:'Mani solījumi',sub:'Aktīvie / uzvarētie / zaudētie',role:'user',notes:{purpose:'Lietotāja solījumi pa stāvokļiem ar atbilstošu darbību.',elements:['Tabi: aktīvie / uzvarētie / zaudētie','Rinda: foto, solījums, badžs','Taimeris / dokumenti'],states:['Augstākais','Pārsolīts','Uzvarēts','Zaudēts','Tukšs']}},
-  {id:'favs',n:17,x:660,y:1160,dev:'browser',kind:'favs',title:'Favorīti',sub:'Tikai ielogotiem',role:'user',notes:{purpose:'Saglabātās izsoles. Tikai autentificētiem.',elements:['Favorītu režģis','Noņemt'],states:['Ir favorīti','Tukšs']}},
-  {id:'docs',n:18,x:960,y:1160,dev:'browser',kind:'docs',title:'Dokumenti',sub:'Rēķini / līgumi',role:'user',notes:{purpose:'Uzvarēto izsoļu dokumenti lejupielādei.',elements:['Saraksts ar statusu','Lejupielāde'],states:['Sagatavots','Nosūtīts'],emails:['Rēķins / dokumenti']}},
-  {id:'nsettings',n:19,x:1260,y:1160,dev:'browser',kind:'nsettings',title:'Iestatījumi',sub:'Paziņojumi + valoda',role:'user',notes:{purpose:'Paziņojumu kanālu un valodas pārvaldība.',elements:['Valoda','E-pasta pārslēgi'],states:['Saglabāts']}},
-  {id:'security',n:20,x:1560,y:1160,dev:'browser',kind:'security',title:'Drošība',sub:'Parole / sesijas',role:'user',notes:{purpose:'Paroles maiņa un sesijas.',elements:['Paroles maiņa','Aktīvās sesijas'],states:['Nomainīta'],emails:['Parole nomainīta','Pieteikšanās no jaunas ierīces']}},
-  {id:'notif',n:21,x:1860,y:1160,dev:'phone',kind:'notif',title:'Paziņojumu centrs',sub:'Zvana ikona',role:'user',notes:{purpose:'Iekšējie paziņojumi ar zvana ikonu.',elements:['Saraksts','Nelasīto indikators','Atzīmēt lasītu'],states:['Ir nelasīti','Tukšs']}},
+  {id:'pbasics',n:15,x:60,y:1160,dev:'browser',kind:'pbasics',title:'Profils — pamatdati',sub:'',role:'user',notes:{purpose:'Pamatdatu skats un rediģēšana.',elements:['Vārds, e-pasts, telefons','Saglabāt'],states:['Skatīšana','Rediģēšana','Saglabāts']}},
+  {id:'bids',n:16,x:360,y:1160,dev:'browser',kind:'bids',title:'Mani solījumi',sub:'Aktīvie / uzvarētie / zaudētie',role:'user',notes:{purpose:'Solījumi pa stāvokļiem ar darbību.',elements:['Tabi','Rinda ar badžu','Taimeris / dokumenti'],states:['Augstākais','Pārsolīts','Uzvarēts','Zaudēts','Tukšs']}},
+  {id:'favs',n:17,x:660,y:1160,dev:'browser',kind:'favs',title:'Favorīti',sub:'Tikai ielogotiem',role:'user',notes:{purpose:'Saglabātās izsoles (tikai autentificētiem).',elements:['Režģis','Noņemt'],states:['Ir favorīti','Tukšs']}},
+  {id:'docs',n:18,x:960,y:1160,dev:'browser',kind:'docs',title:'Dokumenti',sub:'Rēķini / līgumi',role:'user',notes:{purpose:'Uzvarēto izsoļu dokumenti.',elements:['Saraksts ar statusu','Lejupielāde'],states:['Sagatavots','Nosūtīts'],emails:['Rēķins / dokumenti']}},
+  {id:'nsettings',n:19,x:1260,y:1160,dev:'browser',kind:'nsettings',title:'Iestatījumi',sub:'Paziņojumi + valoda',role:'user',notes:{purpose:'Paziņojumu un valodas pārvaldība.',elements:['Valoda','E-pasta pārslēgi'],states:['Saglabāts']}},
+  {id:'security',n:20,x:1560,y:1160,dev:'browser',kind:'security',title:'Drošība',sub:'Parole / sesijas',role:'user',notes:{purpose:'Paroles maiņa un sesijas.',elements:['Paroles maiņa','Sesijas'],states:['Nomainīta'],emails:['Parole nomainīta','Jauna ierīce']}},
+  {id:'notif',n:21,x:1860,y:1160,dev:'phone',kind:'notif',title:'Paziņojumu centrs',sub:'Zvana ikona',role:'user',notes:{purpose:'Iekšējie paziņojumi.',elements:['Saraksts','Nelasīto indikators'],states:['Ir nelasīti','Tukšs']}},
 
-  {id:'dashboard',n:22,x:60,y:1690,dev:'browser',kind:'dashboard',title:'Admin pārskats',sub:'Back-office',role:'admin',notes:{purpose:'Back-office sākumlapa ar rādītājiem un ātrām darbībām.',elements:['Statistika','Drīzāk beidzas','Jauns lots'],states:['Ikdiena']}},
-  {id:'alots',n:23,x:360,y:1690,dev:'browser',kind:'alots',title:'Lotu pārvaldība',sub:'Saraksts',role:'admin',notes:{purpose:'Visu lotu saraksts ar statusu.',elements:['Tabula: lots, cena, statuss','Filtri','Jauns lots'],states:['Melnraksts','Aktīvs','Beidzies','Pārdots']}},
-  {id:'wizard',n:24,x:660,y:1690,dev:'browser',kind:'wizard',title:'Lota izveides vednis',sub:'5 soļi',role:'admin',notes:{purpose:'BalticBid pats liek lotus. Strukturēts vednis.',elements:['1. Pamati','2. Apraksts','3. Foto','4. Parametri (cena, rezerve, solis, prēmija, anti-sniping)','5. Priekšskatījums'],states:['Melnraksts','Publicēts']}},
-  {id:'ausers',n:25,x:960,y:1690,dev:'browser',kind:'ausers',title:'Lietotāju saraksts',sub:'Visi konti',role:'admin',notes:{purpose:'Visu lietotāju pārvaldība.',elements:['Tabula: vārds, tips, statuss','Filtrs: gaida','Bloķēt'],states:['Aktīvs','Gaida','Bloķēts']}},
-  {id:'approve',n:26,x:1260,y:1690,dev:'browser',kind:'approve',title:'Lietotāja apstiprināšana',sub:'KYC / VIES',role:'admin',notes:{purpose:'Manuāla reģistrāciju pārbaude ar VIES statusu.',elements:['Dati + VIES rezultāts','Apstiprināt / Noraidīt / Pieprasīt dok.'],states:['Gaida','VIES derīgs / nederīgs'],emails:['Konts apstiprināts','Konts noraidīts','Pieprasīt dokumentus']}},
-  {id:'gendocs',n:27,x:1560,y:1690,dev:'browser',kind:'gendocs',title:'Dokumentu ģenerēšana',sub:'Rēķini / sūtīšana',role:'admin',notes:{purpose:'Pēc izsoles — rēķinu un dokumentu ģenerēšana uzvarētājam (LV likumdošana).',elements:['Uzvarēto lotu saraksts','Ģenerēt rēķinu / līgumu / aktu','Sūtīt e-pastā'],states:['Sagatavots','Nosūtīts'],emails:['Rēķins / dokumenti']}},
+  {id:'dashboard',n:22,x:60,y:1690,dev:'browser',kind:'dashboard',title:'Admin pārskats',sub:'Back-office',role:'admin',notes:{purpose:'Back-office sākumlapa.',elements:['Statistika','Drīzāk beidzas','Jauns lots'],states:['Ikdiena']}},
+  {id:'alots',n:23,x:360,y:1690,dev:'browser',kind:'alots',title:'Lotu pārvaldība',sub:'Saraksts',role:'admin',notes:{purpose:'Lotu saraksts ar statusu.',elements:['Tabula','Filtri','Jauns lots'],states:['Melnraksts','Aktīvs','Beidzies','Pārdots']}},
+  {id:'wizard',n:24,x:660,y:1690,dev:'browser',kind:'wizard',title:'Lota izveides vednis',sub:'5 soļi',role:'admin',notes:{purpose:'BalticBid pats liek lotus. Strukturēts vednis.',elements:['1. Pamati','2. Apraksts','3. Foto','4. Parametri','5. Priekšskatījums'],states:['Melnraksts','Publicēts']}},
+  {id:'ausers',n:25,x:960,y:1690,dev:'browser',kind:'ausers',title:'Lietotāju saraksts',sub:'Visi konti',role:'admin',notes:{purpose:'Lietotāju pārvaldība.',elements:['Tabula','Filtrs: gaida','Bloķēt'],states:['Aktīvs','Gaida','Bloķēts']}},
+  {id:'approve',n:26,x:1260,y:1690,dev:'browser',kind:'approve',title:'Lietotāja apstiprināšana',sub:'KYC / VIES',role:'admin',notes:{purpose:'Manuāla pārbaude ar VIES statusu.',elements:['Dati + VIES','Apstiprināt / Noraidīt / Dok.'],states:['Gaida','VIES derīgs/nederīgs'],emails:['Apstiprināts','Noraidīts','Pieprasīt dokumentus']}},
+  {id:'gendocs',n:27,x:1560,y:1690,dev:'browser',kind:'gendocs',title:'Dokumentu ģenerēšana',sub:'Rēķini / sūtīšana',role:'admin',notes:{purpose:'Rēķinu un dokumentu ģenerēšana uzvarētājam (LV likumdošana).',elements:['Uzvarēto saraksts','Ģenerēt dokumentus','Sūtīt e-pastā'],states:['Sagatavots','Nosūtīts'],emails:['Rēķins / dokumenti']}},
   {id:'acats',n:28,x:1860,y:1690,dev:'browser',kind:'acats',title:'Kategorijas',sub:'Pārvaldība',role:'admin',notes:{purpose:'Kategoriju un marku pārvaldība.',elements:['Saraksts','Pievienot / rediģēt'],states:['—']}},
-  {id:'content',n:29,x:2160,y:1690,dev:'browser',kind:'content',title:'Satura lapas',sub:'Noteikumi / privātums',role:'admin',notes:{purpose:'Teksta lapu satura redaktors.',elements:['Lapu saraksts','Redaktors','Publicēt'],states:['Melnraksts','Publicēts']}},
-  {id:'abids',n:30,x:2460,y:1690,dev:'browser',kind:'abids',title:'Solījumu pārraudzība',sub:'Audits',role:'admin',notes:{purpose:'Visu solījumu pārskats un audits; atsaukšana īpašos gadījumos.',elements:['Solījumu tabula','Filtri','Atsaukt (ar iemeslu)'],states:['Normāls','Atsaukts']}},
+  {id:'content',n:29,x:2160,y:1690,dev:'browser',kind:'content',title:'Satura lapas',sub:'Noteikumi / privātums',role:'admin',notes:{purpose:'Teksta lapu redaktors.',elements:['Lapu saraksts','Redaktors','Publicēt'],states:['Melnraksts','Publicēts']}},
+  {id:'abids',n:30,x:2460,y:1690,dev:'browser',kind:'abids',title:'Solījumu pārraudzība',sub:'Audits',role:'admin',notes:{purpose:'Solījumu audits; atsaukšana īpašos gadījumos.',elements:['Tabula','Filtri','Atsaukt'],states:['Normāls','Atsaukts']}},
 
-  {id:'email',n:31,x:60,y:2070,dev:'phone',kind:'email',title:'E-pasta šabloni',sub:'28 tipi × 3 val.',role:'system',notes:{purpose:'Komponentu balstīta e-pastu sistēma. Konsekvents header, viens CTA, juridiskais footer.',elements:['28 šablonu tipi','LV / EN / + valoda','Atteikšanās footer'],states:['Augstākais apjoms: „Esi pārsolīts”']}},
-  {id:'errors',n:32,x:390,y:2070,dev:'browser',kind:'errors',title:'Kļūdu lapas',sub:'404 / 503 / kļūda',role:'system',notes:{purpose:'Vienots stils visām kļūdu lapām ar skaidru nākamo soli.',elements:['404, 503, vispārēja','Paskaidrojums + CTA'],states:['404','503 apkope','Vispārēja']}},
-  {id:'cookies',n:33,x:720,y:2070,dev:'browser',kind:'cookies',title:'Sīkdatņu piekrišana',sub:'GDPR',role:'system',notes:{purpose:'Sīkdatņu paziņojums un iestatījumi (GDPR).',elements:['Banner: pieņemt / pielāgot','Kategorijas'],states:['Pirmā vizīte','Pielāgošana']}},
-  {id:'static',n:34,x:1050,y:2070,dev:'browser',kind:'static',title:'Statiskās lapas',sub:'Kā strādā / FAQ / Par',role:'system',notes:{purpose:'Informatīvās lapas: kā strādā, FAQ, par, kontakti.',elements:['Soļu skaidrojums','FAQ akordeons','Kontakti'],states:['—']}},
+  {id:'email',n:31,x:60,y:2070,dev:'phone',kind:'email',title:'E-pasta šabloni',sub:'28 tipi × 3 val.',role:'system',notes:{purpose:'Komponentu balstīta e-pastu sistēma.',elements:['28 šabloni','LV / EN / + valoda','Atteikšanās footer'],states:['Augstākais apjoms: „Esi pārsolīts”']}},
+  {id:'errors',n:32,x:390,y:2070,dev:'browser',kind:'errors',title:'Kļūdu lapas',sub:'404 / 503',role:'system',notes:{purpose:'Vienots stils kļūdu lapām.',elements:['404, 503, vispārēja','CTA'],states:['404','503','Vispārēja']}},
+  {id:'cookies',n:33,x:720,y:2070,dev:'browser',kind:'cookies',title:'Sīkdatņu piekrišana',sub:'GDPR',role:'system',notes:{purpose:'Sīkdatņu paziņojums (GDPR).',elements:['Banner','Kategorijas'],states:['Pirmā vizīte','Pielāgošana']}},
+  {id:'static',n:34,x:1050,y:2070,dev:'browser',kind:'static',title:'Statiskās lapas',sub:'Kā strādā / FAQ',role:'system',notes:{purpose:'Informatīvās lapas.',elements:['Soļi','FAQ','Kontakti'],states:['—']}},
 ];
 
 const EDGES=[
@@ -281,28 +306,28 @@ const EDGES=[
   {f:'gendocs',a:'t',t:'docs',b:'b',type:'rel'},{f:'gendocs',a:'b',t:'email',b:'r',type:'rel'},
   {f:'catalog',a:'b',t:'static',b:'t',type:'sec'},{f:'catalog',a:'b',t:'cookies',b:'t',type:'sec'},
 ];
-
 const CLUSTERS=[
   {x:30,y:50,w:1410,h:430,label:'Autentifikācija',color:ROLES.public.color},
-  {x:30,y:560,w:2540,h:430,label:'Publiskā plūsma',color:ROLES.public.color},
-  {x:30,y:1090,w:2240,h:420,label:'Profils (lietotājs)',color:ROLES.user.color},
-  {x:30,y:1620,w:2840,h:300,label:'Admin (back-office)',color:ROLES.admin.color},
+  {x:30,y:560,w:2540,h:340,label:'Publiskā plūsma',color:ROLES.public.color},
+  {x:30,y:1090,w:2240,h:340,label:'Profils (lietotājs)',color:ROLES.user.color},
+  {x:30,y:1620,w:2840,h:280,label:'Admin (back-office)',color:ROLES.admin.color},
   {x:30,y:2000,w:1380,h:430,label:'Sistēma / transversāli',color:ROLES.system.color},
 ];
 
 const world=document.getElementById('world'),svg=document.getElementById('edges'),viewport=document.getElementById('viewport');
 const nodeEls={};
-function deviceHTML(node){const inner=(TPL[node.kind]||(()=>''))();
-  if(node.dev==='phone')return '<div class="frame phone"><div class="scr ui" style="height:'+(SIZE.phone.h-14)+'px"><div class="notch"></div>'+inner+'</div></div>';
-  if(node.dev==='desk')return '<div><div class="frame browser ui" style="border-radius:8px;height:'+SIZE.desk.h+'px">'+inner+'</div><div class="stand"></div><div class="base"></div></div>';
-  return '<div class="frame browser ui" style="height:'+SIZE.browser.h+'px">'+inner+'</div>';}
+function deviceHTML(node){const f=dims(node.dev),nat=NATIVE[node.dev];
+  const inner=(SCREENS[node.kind]||(()=>''))();
+  const screen='<div class="s" style="width:'+nat.w+'px;height:'+nat.h+'px;transform:scale('+f.k+');transform-origin:top left">'+inner+'</div>';
+  if(node.dev==='phone')return '<div class="phone"><div class="pscr" style="position:relative;width:'+f.w+'px;height:'+f.h+'px;overflow:hidden;border-radius:14px"><div class="notch"></div>'+screen+'</div></div>';
+  if(node.dev==='desk')return '<div><div class="frame" style="width:'+f.w+'px;height:'+f.h+'px;overflow:hidden;border-radius:8px">'+screen+'</div><div class="stand"></div><div class="base"></div></div>';
+  return '<div class="frame" style="width:'+f.w+'px;height:'+f.h+'px;overflow:hidden">'+screen+'</div>';}
 CLUSTERS.forEach(cl=>{const d=document.createElement('div');d.className='cluster';
   d.style.cssText='left:'+cl.x+'px;top:'+cl.y+'px;width:'+cl.w+'px;height:'+cl.h+'px;z-index:0';
   d.innerHTML='<div class="clabel"><span class="cdot" style="background:'+cl.color+'"></span>'+cl.label+'</div>';world.appendChild(d);});
 NODES.forEach(node=>{const el=document.createElement('div');el.className='node';el.dataset.id=node.id;
   const sz=SIZE[node.dev];el.style.cssText='left:'+node.x+'px;top:'+node.y+'px;width:'+sz.w+'px';
-  el.innerHTML='<div class="badge">'+node.n+'</div>'+deviceHTML(node)+
-    '<div class="caption">'+node.title+(node.sub?'<span class="sub">'+node.sub+'</span>':'')+'</div>';
+  el.innerHTML='<div class="badge">'+node.n+'</div>'+deviceHTML(node)+'<div class="caption">'+node.title+(node.sub?'<span class="sub">'+node.sub+'</span>':'')+'</div>';
   world.appendChild(el);nodeEls[node.id]={el,node,w:sz.w,h:sz.h};});
 
 function anchor(o,side){const n=o.node,w=o.w,h=o.h,cx=n.x+w/2,cy=n.y+h/2;
@@ -313,8 +338,8 @@ function drawEdges(){let p=svg.querySelector('defs').outerHTML;
     const dist=Math.hypot(bx-ax,by-ay),k=Math.min(130,dist*0.45);
     const c1x=ax+adx*k,c1y=ay+ady*k,c2x=bx+bdx*k,c2y=by+bdy*k;
     const color=e.type==='main'?'#FF601A':'#C9C6BF',dash=e.type==='sec'?'stroke-dasharray="4 4"':'';
-    const wdt=1,op=e.type==='sec'?0.6:(e.type==='rel'?0.8:1),mk=e.type==='main'?'url(#arrA)':'url(#arr)';
-    p+='<path d="M'+ax+','+ay+' C'+c1x+','+c1y+' '+c2x+','+c2y+' '+bx+','+by+'" fill="none" stroke="'+color+'" stroke-width="'+wdt+'" opacity="'+op+'" '+dash+' marker-end="'+mk+'"></path>';});
+    const op=e.type==='sec'?0.6:(e.type==='rel'?0.8:1),mk=e.type==='main'?'url(#arrA)':'url(#arr)';
+    p+='<path d="M'+ax+','+ay+' C'+c1x+','+c1y+' '+c2x+','+c2y+' '+bx+','+by+'" fill="none" stroke="'+color+'" stroke-width="1" opacity="'+op+'" '+dash+' marker-end="'+mk+'"></path>';});
   svg.innerHTML=p;}
 
 let tx=0,ty=0,scale=1;
@@ -324,7 +349,7 @@ viewport.addEventListener('mousedown',e=>{down=true;moved=false;sx=e.clientX;sy=
 window.addEventListener('mousemove',e=>{if(!down)return;if(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy)>4)moved=true;tx=otx+(e.clientX-sx);ty=oty+(e.clientY-sy);apply();});
 window.addEventListener('mouseup',()=>{viewport.classList.remove('panning');down=false;});
 viewport.addEventListener('click',e=>{if(moved)return;const n=e.target.closest('.node');if(n)selectNode(n.dataset.id);else closeDrawer();});
-viewport.addEventListener('wheel',e=>{e.preventDefault();const fct=e.deltaY<0?1.1:1/1.1,ns=Math.min(2.6,Math.max(0.22,scale*fct));
+viewport.addEventListener('wheel',e=>{e.preventDefault();const fct=e.deltaY<0?1.1:1/1.1,ns=Math.min(2.8,Math.max(0.2,scale*fct));
   const rx=(e.clientX-tx)/scale,ry=(e.clientY-ty)/scale;scale=ns;tx=e.clientX-rx*scale;ty=e.clientY-ry*scale;apply();},{passive:false});
 let lt=null;
 viewport.addEventListener('touchstart',e=>{if(e.touches.length===1)lt=[e.touches[0].clientX-tx,e.touches[0].clientY-ty];},{passive:true});
@@ -352,8 +377,8 @@ function fit(){const pad=70;let mnX=1e9,mnY=1e9,mxX=-1e9,mxY=-1e9;
   Object.values(nodeEls).forEach(o=>{mnX=Math.min(mnX,o.node.x);mnY=Math.min(mnY,o.node.y);mxX=Math.max(mxX,o.node.x+o.w);mxY=Math.max(mxY,o.node.y+o.h+30);});
   const w=mxX-mnX,h=mxY-mnY,sw=window.innerWidth,sh=window.innerHeight;
   scale=Math.min(1.2,(sw-pad*2)/w,(sh-pad*2-70)/h);tx=(sw-w*scale)/2-mnX*scale;ty=(sh-h*scale)/2-mnY*scale+22;apply();}
-document.getElementById('zin').onclick=()=>{scale=Math.min(2.6,scale*1.15);apply();};
-document.getElementById('zout').onclick=()=>{scale=Math.max(0.22,scale/1.15);apply();};
+document.getElementById('zin').onclick=()=>{scale=Math.min(2.8,scale*1.15);apply();};
+document.getElementById('zout').onclick=()=>{scale=Math.max(0.2,scale/1.15);apply();};
 document.getElementById('reset').onclick=fit;
 drawEdges();fit();
 </script>
